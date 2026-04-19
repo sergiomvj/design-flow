@@ -1,0 +1,138 @@
+import express from 'express';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import Database from 'better-sqlite3';
+import cors from 'cors';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const baseDb = new Database('prisma/dev.db');
+const adapter = new PrismaBetterSqlite3(baseDb);
+const prisma = new PrismaClient({ adapter });
+const app = express();
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
+
+app.use(cors());
+app.use(express.json());
+
+// --- Authentication Middleware ---
+const authenticate = (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    req.userId = decoded.userId;
+    req.userRole = decoded.role;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// --- Auth Routes ---
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, name, role } = req.body;
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { email, password: hashedPassword, name, role },
+    });
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+  } catch (err: any) {
+    res.status(400).json({ error: 'User already exists' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
+  res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+});
+
+app.get('/api/auth/me', authenticate, async (req: any, res: any) => {
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+});
+
+app.get('/api/auth/team', authenticate, async (req: any, res: any) => {
+  const users = await prisma.user.findMany({
+    select: { id: true, name: true, email: true, role: true, createdAt: true }
+  });
+  res.json(users);
+});
+
+// --- Project Routes ---
+app.post('/api/projects', authenticate, async (req: any, res: any) => {
+  try {
+    const project = await prisma.project.create({
+      data: {
+        ...req.body,
+        requesterId: req.userId,
+      },
+    });
+    res.json(project);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/projects', authenticate, async (req: any, res: any) => {
+  let where = {};
+  if (req.userRole === 'CLIENT') {
+    where = { requesterId: req.userId };
+  }
+  // DESIGNER and ADMIN can see all projects
+  
+  const projects = await prisma.project.findMany({
+    where,
+    include: { requester: { select: { name: true } }, designer: { select: { name: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(projects);
+});
+
+app.get('/api/projects/:id', authenticate, async (req: any, res: any) => {
+  const project = await prisma.project.findUnique({
+    where: { id: req.params.id },
+    include: { requester: true, designer: true, comments: { include: { user: true } } },
+  });
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  res.json(project);
+});
+
+app.patch('/api/projects/:id', authenticate, async (req: any, res: any) => {
+  try {
+    const project = await prisma.project.update({
+      where: { id: req.params.id },
+      data: req.body,
+    });
+    res.json(project);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// --- Dashboard Stats ---
+app.get('/api/dashboard/stats', authenticate, async (req: any, res: any) => {
+  const stats = await prisma.project.groupBy({
+    by: ['status'],
+    _count: { _all: true },
+  });
+  res.json(stats);
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
