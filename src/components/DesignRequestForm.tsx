@@ -130,7 +130,7 @@ export function DesignRequestForm() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 pb-32">
+    <div className="max-w-4xl mx-auto space-y-10 md:space-y-20 pb-32">
       {/* Progress Header */}
       <div className="bg-white p-3 md:p-6 rounded-[24px] md:rounded-[32px] border border-zinc-100 shadow-sm sticky top-20 md:top-24 z-20 overflow-x-auto no-scrollbar scroll-smooth">
         <div className="flex justify-between items-center min-w-max md:min-w-full gap-6 md:gap-0 px-2 md:px-4">
