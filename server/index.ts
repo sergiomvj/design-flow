@@ -1,8 +1,6 @@
 import express from 'express';
-import pkg from '@prisma/client';
-const { PrismaClient } = pkg;
+import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import Database from 'better-sqlite3';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -10,8 +8,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const baseDb = new Database('prisma/dev.db');
-const adapter = new PrismaBetterSqlite3(baseDb);
+const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' });
 const prisma = new PrismaClient({ adapter });
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,26 +44,43 @@ const authenticate = (req: any, res: any, next: any) => {
 // --- Auth Routes ---
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, name, role } = req.body;
+  console.log(`[AUTH] Registration attempt for: ${email}`);
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { email, password: hashedPassword, name, role },
     });
+    console.log(`[AUTH] User created successfully: ${user.id}`);
     res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
   } catch (err: any) {
-    res.status(400).json({ error: 'User already exists' });
+    console.error('[AUTH] Registration error:', err);
+    res.status(400).json({ error: 'User already exists or database error' });
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
+  console.log(`[AUTH] Login attempt for: ${email}`);
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      console.warn(`[AUTH] Login failed: User not found (${email})`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
-  res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      console.warn(`[AUTH] Login failed: Password mismatch (${email})`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
+    console.log(`[AUTH] Login successful: ${user.email}`);
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+  } catch (err: any) {
+    console.error('[AUTH] Login internal error:', err);
+    res.status(500).json({ error: 'Internal server error during authentication' });
+  }
 });
 
 app.get('/api/auth/me', authenticate, async (req: any, res: any) => {

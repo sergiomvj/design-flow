@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "server": "tsx server/index.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
