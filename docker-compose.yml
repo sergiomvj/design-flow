@@ -1,0 +1,19 @@
+services:
+  design-flow:
+    build:
+      context: .
+      args:
+        GEMINI_API_KEY: ${GEMINI_API_KEY}
+    image: design-flow-pro
+    container_name: design-flow-pro
+    ports:
+      - "8080:80"
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - design-network
+
+networks:
+  design-network:
+    driver: bridge
