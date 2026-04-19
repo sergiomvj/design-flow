@@ -17,6 +17,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
 app.use(cors());
 app.use(express.json());
 
+// --- Request Logger ---
+app.use((req, res, next) => {
+  console.log(`[SERVER] ${req.method} ${req.path}`);
+  next();
+});
+
 // --- Root Diagnostic Route ---
 app.get('/', (req, res) => {
   res.json({

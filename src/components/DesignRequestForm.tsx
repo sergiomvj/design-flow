@@ -130,19 +130,19 @@ export function DesignRequestForm() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 md:space-y-12 pb-32">
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 pb-32">
       {/* Progress Header */}
-      <div className="flex items-center bg-white p-4 md:p-8 rounded-[24px] md:rounded-[32px] border border-zinc-100 shadow-sm sticky top-24 md:top-28 z-20 overflow-x-auto no-scrollbar scroll-smooth">
-        <div className="flex justify-between items-center min-w-max md:min-w-full gap-8 md:gap-0 px-2 md:px-0">
+      <div className="bg-white p-3 md:p-6 rounded-[24px] md:rounded-[32px] border border-zinc-100 shadow-sm sticky top-20 md:top-24 z-20 overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex justify-between items-center min-w-max md:min-w-full gap-6 md:gap-0 px-2 md:px-4">
           {steps.map((step) => (
-            <div key={step.id} className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => setCurrentStep(step.id)}>
+            <div key={step.id} className="flex flex-col items-center gap-1.5 group cursor-pointer" onClick={() => setCurrentStep(step.id)}>
               <div className={`
-                w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all duration-300
                 ${currentStep >= step.id ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-zinc-100 text-zinc-400 group-hover:bg-zinc-200'}
               `}>
-                <step.icon size={18} />
+                <step.icon size={16} className="md:w-5 md:h-5" />
               </div>
-              <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${currentStep === step.id ? 'text-zinc-950' : 'text-zinc-400'}`}>
+              <span className={`text-[7px] md:text-[9px] font-black uppercase tracking-widest ${currentStep === step.id ? 'text-zinc-950' : 'text-zinc-400'}`}>
                 {step.title}
               </span>
             </div>
