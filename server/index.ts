@@ -20,6 +20,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
 app.use(cors());
 app.use(express.json());
 
+// --- Root Diagnostic Route ---
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Design Flow API Server is running',
+    frontend: 'http://localhost:3000',
+    status: 'Operational'
+  });
+});
+
 // --- Authentication Middleware ---
 const authenticate = (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
