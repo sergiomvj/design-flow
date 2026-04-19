@@ -5,8 +5,13 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' });
 const prisma = new PrismaClient({ adapter });
@@ -17,6 +22,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
 app.use(cors());
 app.use(express.json());
 
+// --- Static Files ---
+// In production, the backend serves the frontend from the 'dist' folder
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
 // --- Request Logger ---
 app.use((req, res, next) => {
   console.log(`[SERVER] ${req.method} ${req.path}`);
@@ -24,10 +34,9 @@ app.use((req, res, next) => {
 });
 
 // --- Root Diagnostic Route ---
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({
     message: 'Design Flow API Server is running',
-    frontend: 'http://localhost:3000',
     status: 'Operational'
   });
 });
@@ -122,7 +131,6 @@ app.get('/api/projects', authenticate, async (req: any, res: any) => {
   if (req.userRole === 'CLIENT') {
     where = { requesterId: req.userId };
   }
-  // DESIGNER and ADMIN can see all projects
   
   const projects = await prisma.project.findMany({
     where,
@@ -162,6 +170,12 @@ app.get('/api/dashboard/stats', authenticate, async (req: any, res: any) => {
   res.json(stats);
 });
 
+// --- SPA Fallback ---
+// Handle React Router paths by serving index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

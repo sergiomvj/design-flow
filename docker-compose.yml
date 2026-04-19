@@ -7,8 +7,10 @@ services:
     image: design-flow-pro
     container_name: design-flow-pro
     ports:
-      - "8080:80"
+      - "3001:3001"
     restart: always
+    volumes:
+      - ./prisma/dev.db:/app/prisma/dev.db
     env_file:
       - .env
     networks:

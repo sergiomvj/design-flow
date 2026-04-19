@@ -1,32 +1,36 @@
-# Stage 1: Build
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (including devDeps for build)
 COPY package*.json ./
 RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build arguments for environment variables
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Build frontend
 ARG GEMINI_API_KEY
 ENV GEMINI_API_KEY=$GEMINI_API_KEY
-
-# Generate static build
 RUN npm run build
 
-# Stage 2: Production
-FROM nginx:stable-alpine
+# Final Stage
+FROM node:20-alpine
 
-# Copy built files from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy only necessary files
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server ./server
+COPY --from=build /app/prisma ./prisma
 
-# Expose port 80
-EXPOSE 80
+# Expose backend port
+EXPOSE 3001
 
-CMD ["nginx", "-g", "daemon off;"]
+# Run migrations and start server
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
