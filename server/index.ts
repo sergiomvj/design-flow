@@ -15,6 +15,12 @@ const __dirname = path.dirname(__filename);
 
 const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' });
 const prisma = new PrismaClient({ adapter });
+
+console.log('[DATABASE] Initializing Prisma with SQLite adapter...');
+prisma.$connect()
+  .then(() => console.log('[DATABASE] Connection successful.'))
+  .catch(err => console.error('[DATABASE] Connection failed:', err));
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
