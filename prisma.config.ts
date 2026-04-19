@@ -1,8 +1,8 @@
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
+  schema: "prisma/schema.prisma",
   datasource: {
-    // For SQLite, the URL is used for migrations
-    url: "file:./dev.db",
+    url: "file:./prisma/dev.db",
   },
 });
