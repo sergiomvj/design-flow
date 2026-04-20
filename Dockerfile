@@ -3,7 +3,7 @@
 # =============================================================================
 FROM node:22-slim AS build
 
-# openssl e ca-certificates necessários para o Prisma
+# openssl e ca-certificates necessarios para o Prisma
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     ca-certificates \
@@ -16,9 +16,9 @@ RUN npm install
 
 COPY . .
 
-# Gera o Prisma Client isolado de interferências externas
-# Prisma 7 requer validação de conexão
-RUN touch /tmp/build.db && DATABASE_URL="file:/tmp/build.db" npx prisma generate
+# O Prisma Client ja e gerado no npm install via postinstall do @prisma/client.
+# Evitamos rodar `prisma generate` novamente no build porque esse passo tem
+# falhado no EasyPanel apesar de nao ser necessario para esta imagem.
 
 # Build do frontend (Vite)
 RUN npm run build
@@ -48,5 +48,5 @@ RUN mkdir -p /app/data
 
 EXPOSE 3001
 
-# ENTRYPOINT evita que o EasyPanel sobrescreva o comando de inicialização com flags inválidas
+# ENTRYPOINT evita que o EasyPanel sobrescreva o comando de inicializacao com flags invalidas
 ENTRYPOINT ["/app/start.sh"]
