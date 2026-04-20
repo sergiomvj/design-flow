@@ -4,7 +4,7 @@
 FROM node:20-alpine AS build
 
 # Dependências nativas para better-sqlite3
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ openssl
 
 WORKDIR /app
 
@@ -19,7 +19,9 @@ ARG DATABASE_URL="file:./prisma/dev.db"
 ENV DATABASE_URL=$DATABASE_URL
 
 # Gera o Prisma Client
-RUN npx prisma generate
+# --no-engine: o @prisma/adapter-better-sqlite3 substitui o query engine nativo,
+# então não precisamos baixar o binário do Prisma (que falha no Alpine/musl)
+RUN npx prisma generate --no-engine
 
 # Build do frontend (Vite)
 # GEMINI_API_KEY foi removida do build — a chave ficará apenas no servidor (runtime)
