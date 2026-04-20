@@ -1,10 +1,14 @@
 # =============================================================================
 # Stage 1: Build
+# node:20-slim = Debian slim (glibc) — evita problemas de musl/Alpine com Prisma
 # =============================================================================
-FROM node:20-alpine AS build
+FROM node:20-slim AS build
 
-# openssl necessário para os binários do Prisma no Alpine
-RUN apk add --no-cache openssl
+# openssl e ca-certificates necessários para o Prisma e conexões HTTPS
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -13,8 +17,7 @@ RUN npm install
 
 COPY . .
 
-# Gera o Prisma Client com binário para Alpine (linux-musl-openssl-3.0.x)
-# definido via binaryTargets no schema.prisma
+# Gera o Prisma Client (funciona nativamente no Debian/glibc sem config especial)
 RUN DATABASE_URL="file:./prisma/dev.db" npx prisma generate
 
 # Build do frontend (Vite)
@@ -23,10 +26,12 @@ RUN npm run build
 # =============================================================================
 # Stage 2: Production
 # =============================================================================
-FROM node:20-alpine
+FROM node:20-slim
 
-# openssl necessário para rodar o Prisma engine em produção
-RUN apk add --no-cache openssl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -45,6 +50,6 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=5 \
   CMD node -e "fetch('http://localhost:3001/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
-# DATABASE_URL, JWT_SECRET e GEMINI_API_KEY devem ser configurados
-# nas Environment Variables do EasyPanel (runtime, não build args)
+# DATABASE_URL, JWT_SECRET e GEMINI_API_KEY configurados nas Environment Variables
+# do EasyPanel (runtime) — não como build args
 CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx server/index.ts"]
