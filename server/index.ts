@@ -14,12 +14,14 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_POSTGRES_URL;
+console.log('[SERVER] DATABASE_URL:', dbUrl ? 'SET' : 'NOT SET');
+
+const pool = new Pool({ connectionString: dbUrl });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-
-console.log('[DATABASE] Initializing Prisma with SQLite adapter...');
+console.log('[DATABASE] Initializing Prisma with PostgreSQL...');
 prisma.$connect()
   .then(() => console.log('[DATABASE] Connection successful.'))
   .catch(err => console.error('[DATABASE] Connection failed:', err));
