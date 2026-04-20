@@ -17,14 +17,18 @@ const __dirname = path.dirname(__filename);
 const dbUrl = process.env.DATABASE_URL || process.env.DATABASE_POSTGRES_URL;
 console.log('[SERVER] DATABASE_URL:', dbUrl ? 'SET' : 'NOT SET');
 
-const pool = new Pool({ connectionString: dbUrl });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-console.log('[DATABASE] Initializing Prisma with PostgreSQL...');
-prisma.$connect()
-  .then(() => console.log('[DATABASE] Connection successful.'))
-  .catch(err => console.error('[DATABASE] Connection failed:', err));
+let prisma: any;
+try {
+  const pool = new Pool({ connectionString: dbUrl });
+  const adapter = new PrismaPg(pool);
+  prisma = new PrismaClient({ adapter });
+  console.log('[DATABASE] Initializing Prisma...');
+  prisma.$connect()
+    .then(() => console.log('[DATABASE] ✓ Connected.'))
+    .catch((err: any) => console.error('[DATABASE] ✗ Connection failed:', err.message));
+} catch (err: any) {
+  console.error('[DATABASE] ✗ Init failed:', err.message);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -193,6 +197,12 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start server
+console.log(`[SERVER] Attempting to listen on port ${PORT}...`);
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`[SERVER] ✓ Server running on port ${PORT}`);
+});
+
+server.on('error', (err) => {
+  console.error(`[SERVER] ✗ Server error:`, err);
 });
