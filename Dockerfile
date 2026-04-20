@@ -17,9 +17,8 @@ RUN npm install
 COPY . .
 
 # Gera o Prisma Client isolado de interferências externas
-# Cria um banco temporário vazio para o Prisma conseguir validar a conexão SQLite
-RUN touch /tmp/build.db && \
-    DATABASE_URL="file:/tmp/build.db" npx prisma generate
+# Prisma 7 requer validação de conexão
+RUN touch /tmp/build.db && DATABASE_URL="file:/tmp/build.db" npx prisma generate
 
 # Build do frontend (Vite)
 RUN npm run build
