@@ -48,6 +48,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Some browsers still request /favicon.ico even when an SVG icon is declared.
+// Returning 204 avoids noisy proxy errors when no .ico file exists.
+app.get('/favicon.ico', (_req, res) => {
+  res.status(204).end();
+});
+
 // --- Authentication Middleware ---
 const authenticate = (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
