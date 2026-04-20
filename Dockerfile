@@ -13,15 +13,10 @@ RUN npm install
 
 COPY . .
 
-# DATABASE_URL: recebe do EasyPanel via --build-arg, com fallback para build local
-# Não é dado sensível (apenas caminho de arquivo de desenvolvimento)
-ARG DATABASE_URL="file:./prisma/dev.db"
-ENV DATABASE_URL=$DATABASE_URL
-
 # Gera o Prisma Client
-# --no-engine: o @prisma/adapter-better-sqlite3 substitui o query engine nativo,
-# então não precisamos baixar o binário do Prisma (que falha no Alpine/musl)
-RUN npx prisma generate --no-engine
+# DATABASE_URL definida inline para isolar do valor de produção injetado pelo EasyPanel.
+# --no-engine: o @prisma/adapter-better-sqlite3 substitui o query engine nativo.
+RUN DATABASE_URL="file:./prisma/dev.db" npx prisma generate --no-engine
 
 # Build do frontend (Vite)
 # GEMINI_API_KEY foi removida do build — a chave ficará apenas no servidor (runtime)
