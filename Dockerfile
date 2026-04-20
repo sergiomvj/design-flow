@@ -13,17 +13,17 @@ RUN npm install
 
 COPY . .
 
-# DATABASE_URL temporário só para o prisma generate funcionar no build
-# (não precisa de banco real, só gera o client TypeScript)
-ENV DATABASE_URL="file:./prisma/dev.db"
+# DATABASE_URL: recebe do EasyPanel via --build-arg, com fallback para build local
+# Não é dado sensível (apenas caminho de arquivo de desenvolvimento)
+ARG DATABASE_URL="file:./prisma/dev.db"
+ENV DATABASE_URL=$DATABASE_URL
 
 # Gera o Prisma Client
 RUN npx prisma generate
 
 # Build do frontend (Vite)
-# GEMINI_API_KEY é injetada em tempo de build pelo Vite (vite.config.ts define process.env.GEMINI_API_KEY)
-ARG GEMINI_API_KEY
-RUN GEMINI_API_KEY=$GEMINI_API_KEY npm run build
+# GEMINI_API_KEY foi removida do build — a chave ficará apenas no servidor (runtime)
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Production
@@ -50,10 +50,6 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=5 \
   CMD node -e "fetch('http://localhost:3001/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
-# Em produção, o banco fica no volume persistente /app/data
-# As variáveis sensíveis (JWT_SECRET, GEMINI_API_KEY) vêm do ambiente da VPS,
-# nunca embutidas na imagem
-ENV DATABASE_URL="file:/app/data/production.db"
-
-# Executa as migrations pendentes e sobe o servidor
+# Em produção: DATABASE_URL, JWT_SECRET e GEMINI_API_KEY devem ser
+# configurados nas Environment Variables do EasyPanel (não como build args)
 CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx server/index.ts"]
