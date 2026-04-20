@@ -17,8 +17,9 @@ RUN npm install
 COPY . .
 
 # Gera o Prisma Client isolado de interferências externas
-# O Prisma 7 NÃO suporta o flag --url. Ele lê DATABASE_URL do ambiente.
-RUN DATABASE_URL="file:/tmp/build.db" npx prisma generate
+# Cria um banco temporário vazio para o Prisma conseguir validar a conexão SQLite
+RUN touch /tmp/build.db && \
+    DATABASE_URL="file:/tmp/build.db" npx prisma generate
 
 # Build do frontend (Vite)
 RUN npm run build
