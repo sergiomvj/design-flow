@@ -13,8 +13,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' });
+const DB_URL = process.env.DATABASE_URL || 'file:./prisma/dev.db';
+const adapter = new PrismaBetterSqlite3({ url: DB_URL });
 const prisma = new PrismaClient({ adapter });
+
 
 console.log('[DATABASE] Initializing Prisma with SQLite adapter...');
 prisma.$connect()

@@ -8,13 +8,27 @@ services:
     container_name: design-flow-pro
     ports:
       - "80:3001"
-    restart: always
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/production.db
+      - JWT_SECRET=${JWT_SECRET:-super-secret-key-change-me}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
-      - ./prisma/dev.db:/app/prisma/dev.db
-    env_file:
-      - .env
+      # Volume nomeado: persiste o banco SQLite entre restarts/deploys
+      - design_flow_data:/app/data
     networks:
       - design-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 5
+
+volumes:
+  design_flow_data:
+    driver: local
 
 networks:
   design-network:
