@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
-const adapter = new PrismaLibSql({ url: 'file:./prisma/dev.db' });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:Super1404@webserver2_postgres_designflow:5432/webserver2?sslmode=disable' });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function seed() {
