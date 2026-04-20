@@ -6,5 +6,5 @@ echo "[STARTUP] DATABASE_URL is set: $(test -n \"$DATABASE_URL\" && echo YES || 
 echo "[STARTUP] PORT: ${PORT:-3001}"
 echo "[STARTUP] ====================="
 
-echo "[STARTUP] Starting node..."
-exec node --loader tsx server/index.ts
+echo "[STARTUP] Starting node with tsx..."
+exec node --import tsx server/index.ts
