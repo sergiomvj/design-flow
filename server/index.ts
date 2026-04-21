@@ -34,6 +34,7 @@ const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
 const ADMIN_SETUP_SECRET = process.env.ADMIN_SETUP_SECRET || 'setup-admin-2024';
+const ENABLE_ADMIN_BOOTSTRAP = process.env.ENABLE_ADMIN_BOOTSTRAP === 'true';
 
 console.log('[SERVER] PORT:', PORT);
 
@@ -65,15 +66,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-const databaseReady = initializeDatabase()
-  .then(async () => {
-    await healthcheck();
-    console.log('[DATABASE] Connected');
-  })
-  .catch((error: unknown) => {
-    console.error('[DATABASE] INIT ERROR:', getErrorMessage(error));
-    throw error;
-  });
+let databaseInitError: string | null = null;
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -89,11 +82,26 @@ function isUniqueViolation(error: any) {
 
 async function ensureDatabase(res: express.Response) {
   try {
-    await databaseReady;
+    await initializeDatabase();
+    await healthcheck();
+    databaseInitError = null;
     return true;
   } catch (error) {
-    res.status(503).json({ error: 'Database unavailable', details: getErrorMessage(error) });
+    databaseInitError = getErrorMessage(error);
+    res.status(503).json({ error: 'Database unavailable', details: databaseInitError });
     return false;
+  }
+}
+
+async function warmupDatabaseConnection() {
+  try {
+    await initializeDatabase();
+    await healthcheck();
+    databaseInitError = null;
+    console.log('[DATABASE] Connected');
+  } catch (error) {
+    databaseInitError = getErrorMessage(error);
+    console.error('[DATABASE] INIT ERROR:', databaseInitError);
   }
 }
 
@@ -142,12 +150,25 @@ function sanitizeProjectBody(body: Record<string, any>) {
   return sanitized;
 }
 
+app.get('/api/auth/config', (_req, res) => {
+  res.json({
+    enableAdminBootstrap: ENABLE_ADMIN_BOOTSTRAP,
+  });
+});
+
 app.get('/api/health', async (_req, res) => {
   try {
+    await initializeDatabase();
     await healthcheck();
+    databaseInitError = null;
     res.json({ status: 'ok', time: new Date().toISOString(), database: true });
   } catch (error) {
-    res.status(503).json({ status: 'error', database: false, details: getErrorMessage(error) });
+    databaseInitError = getErrorMessage(error);
+    res.status(503).json({
+      status: 'error',
+      database: false,
+      details: databaseInitError,
+    });
   }
 });
 
@@ -157,6 +178,10 @@ app.get('/favicon.ico', (_req, res) => {
 
 app.post('/api/admin/setup', async (req, res) => {
   if (!(await ensureDatabase(res))) return;
+
+  if (!ENABLE_ADMIN_BOOTSTRAP) {
+    return res.status(403).json({ error: 'Admin bootstrap disabled' });
+  }
 
   const { email, password, name } = req.body;
   const secret = req.headers['x-admin-secret'];
@@ -183,13 +208,28 @@ app.post('/api/admin/setup', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   if (!(await ensureDatabase(res))) return;
 
-  const { email, password, name, role } = req.body;
+  const { email, password, name, adminSetupSecret } = req.body;
 
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  console.log('[AUTH] Register:', email, 'role:', role || 'CLIENT');
+  const wantsAdmin = Boolean(adminSetupSecret);
+  let role: 'CLIENT' | 'ADMIN' = 'CLIENT';
+
+  if (wantsAdmin) {
+    if (!ENABLE_ADMIN_BOOTSTRAP) {
+      return res.status(403).json({ error: 'Admin registration is disabled' });
+    }
+
+    if (adminSetupSecret !== ADMIN_SETUP_SECRET) {
+      return res.status(403).json({ error: 'Invalid admin setup secret' });
+    }
+
+    role = 'ADMIN';
+  }
+
+  console.log('[AUTH] Register:', email, 'role:', role);
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -197,7 +237,7 @@ app.post('/api/auth/register', async (req, res) => {
       email,
       password: hashedPassword,
       name,
-      role: role || 'CLIENT',
+      role,
     });
 
     console.log('[AUTH] Created:', user?.id);
@@ -406,13 +446,8 @@ app.patch('/api/projects/:id', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const canEdit =
-      decoded.role === 'ADMIN' ||
-      currentProject.requesterId === decoded.userId ||
-      currentProject.designerId === decoded.userId;
-
-    if (!canEdit) {
-      return res.status(403).json({ error: 'Access denied' });
+    if (decoded.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only administrators can update jobs' });
     }
 
     const body = sanitizeProjectBody(req.body);
@@ -430,3 +465,4 @@ app.get('*', (_req, res) => {
 
 console.log('[SERVER] Ready on port', PORT);
 app.listen(PORT, '0.0.0.0');
+void warmupDatabaseConnection();

@@ -92,9 +92,10 @@ const projectFieldMap = {
 } as const;
 
 const bootstrapStatements = [
+  'CREATE EXTENSION IF NOT EXISTS pgcrypto',
   `
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
       name TEXT NOT NULL,
@@ -106,12 +107,12 @@ const bootstrapStatements = [
   `,
   `
     CREATE TABLE IF NOT EXISTS projects (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       job_number TEXT UNIQUE,
       status TEXT NOT NULL DEFAULT 'RECEIVED',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      requester_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      requester_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
       company TEXT NOT NULL,
       requester_email TEXT NOT NULL,
       phone TEXT NOT NULL,
@@ -150,7 +151,7 @@ const bootstrapStatements = [
       reviewer_count INTEGER DEFAULT 1,
       revision_count INTEGER NOT NULL DEFAULT 1,
       additional_charges_aware BOOLEAN NOT NULL DEFAULT FALSE,
-      designer_id TEXT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+      designer_id UUID REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
       priority TEXT DEFAULT 'MEDIUM',
       internal_notes TEXT,
       is_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -160,11 +161,11 @@ const bootstrapStatements = [
   `,
   `
     CREATE TABLE IF NOT EXISTS comments (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       text TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE ON UPDATE CASCADE
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE ON UPDATE CASCADE
     )
   `,
   'CREATE INDEX IF NOT EXISTS idx_projects_requester_id ON projects(requester_id)',
@@ -345,7 +346,10 @@ export async function initializeDatabase() {
       for (const statement of bootstrapStatements) {
         await db.query(statement);
       }
-    })();
+    })().catch((error) => {
+      initPromise = null;
+      throw error;
+    });
   }
 
   return initPromise;

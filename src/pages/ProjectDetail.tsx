@@ -122,7 +122,7 @@ export function ProjectDetail() {
             <span className="hidden sm:inline">Export PDF</span>
           </button>
 
-          {(user?.role === 'ADMIN' || project.requesterId === user?.id) && (
+          {user?.role === 'ADMIN' && (
             <Link 
               to={`/projects/edit/${id}`}
               className="flex items-center gap-3 bg-primary text-white hover:bg-primary/90 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-primary/20"
@@ -236,7 +236,7 @@ export function ProjectDetail() {
                 </div>
                 <div className="flex-1">
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Designer Assigned</p>
-                  {(user?.role === 'ADMIN' || project.requesterId === user?.id) ? (
+                  {user?.role === 'ADMIN' ? (
                     <select 
                       value={project.designerId || ''}
                       onChange={(e) => handleAssignDesigner(e.target.value)}

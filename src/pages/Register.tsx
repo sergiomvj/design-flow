@@ -6,20 +6,45 @@ export function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adminSetupSecret, setAdminSetupSecret] = useState('');
+  const [enableAdminBootstrap, setEnableAdminBootstrap] = useState(false);
+  const [wantsAdminAccess, setWantsAdminAccess] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    async function loadAuthConfig() {
+      try {
+        const res = await fetch('/api/auth/config');
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setEnableAdminBootstrap(Boolean(data.enableAdminBootstrap));
+      } catch {
+        setEnableAdminBootstrap(false);
+      }
+    }
+
+    void loadAuthConfig();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    const payload: Record<string, string> = { name, email, password };
+
+    if (enableAdminBootstrap && wantsAdminAccess && adminSetupSecret.trim()) {
+      payload.adminSetupSecret = adminSetupSecret.trim();
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -100,9 +125,42 @@ export function Register() {
                 </div>
               </div>
 
+              {enableAdminBootstrap && (
+                <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={wantsAdminAccess}
+                      onChange={(e) => setWantsAdminAccess(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-300"
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">
+                      Criar conta como admin para testes
+                    </span>
+                  </label>
+
+                  {wantsAdminAccess && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700 ml-2">Admin Setup Secret</label>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-300 group-focus-within:text-amber-500 transition-colors" size={18} />
+                        <input
+                          type="password"
+                          required
+                          value={adminSetupSecret}
+                          onChange={(e) => setAdminSetupSecret(e.target.value)}
+                          className="w-full bg-white border border-amber-200 focus:bg-white focus:border-amber-400 p-4 pl-12 rounded-2xl outline-none text-sm font-bold text-zinc-950 transition-all"
+                          placeholder="Temporary admin bootstrap secret"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-center">
                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                  Public sign-up creates a `CLIENT` account. Staff access is managed internally.
+                  Public sign-up creates a `CLIENT` account. Admin bootstrap only stays active during the test phase.
                 </p>
               </div>
 

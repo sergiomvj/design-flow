@@ -128,7 +128,7 @@ export function DesignRequestForm() {
 
     const fetchDesigners = async () => {
       if (!token || !user) return;
-      const canSeeDesigners = user.role === 'ADMIN' || isEditing;
+      const canSeeDesigners = user.role === 'ADMIN';
       if (!canSeeDesigners) return;
       
       try {
@@ -146,6 +146,10 @@ export function DesignRequestForm() {
 
     if (token) {
       if (isEditing) {
+        if (user?.role !== 'ADMIN') {
+          navigate('/');
+          return;
+        }
         fetchProject();
       } else if (user && user.role !== 'ADMIN') {
         navigate('/');
@@ -338,7 +342,7 @@ export function DesignRequestForm() {
             <Section icon={Settings} title="Internal Control">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <Select label="INTERNAL PRIORITY" options={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']} value={formData.priority} onChange={v => updateField('priority', v)} />
-                {(user?.role === 'ADMIN' || isEditing) && (
+                {user?.role === 'ADMIN' && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">Assign Designer</label>
                     <select 
