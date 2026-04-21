@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { Search, Users, Shield, Mail, Zap, MoreHorizontal } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TeamUser {
   id: string;
@@ -10,7 +10,7 @@ interface TeamUser {
   createdAt: string;
 }
 
-export function Team() {
+export function Team({ embedded = false }: { embedded?: boolean }) {
   const { token } = useAuth();
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,17 +44,31 @@ export function Team() {
   }, [token]);
 
   return (
-    <div className="space-y-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-black tracking-tighter text-zinc-950 uppercase">Network Team</h2>
-          <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs mt-2">Manage access levels and professional roles</p>
+    <div className={embedded ? 'space-y-8' : 'space-y-12'}>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-black tracking-tighter text-zinc-950 uppercase">Network Team</h2>
+            <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs mt-2">Manage access levels and professional roles</p>
+          </div>
+          <button className="signature-gradient px-8 py-4 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-3 opacity-60 cursor-not-allowed">
+            Invite Professional
+            <Zap size={18} />
+          </button>
         </div>
-        <button className="signature-gradient px-8 py-4 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-3 opacity-60 cursor-not-allowed">
-          Invite Professional
-          <Zap size={18} />
-        </button>
-      </div>
+      )}
+
+      {embedded && (
+        <div className="flex items-center justify-between gap-6">
+          <div>
+            <h3 className="text-2xl font-black tracking-tight text-zinc-950">Users</h3>
+            <p className="text-zinc-400 font-bold uppercase tracking-widest text-[10px] mt-2">Manage roles and access directly from settings</p>
+          </div>
+          <div className="rounded-2xl bg-zinc-100 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+            Admin Only
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-100 rounded-[40px] shadow-sm overflow-hidden">
         <div className="p-8 border-b border-zinc-50 flex items-center gap-4 bg-zinc-50/50">
@@ -86,36 +100,37 @@ export function Team() {
                   <div className="space-y-1">
                     <h3 className="text-lg font-black tracking-tight text-zinc-950">{u.name}</h3>
                     <div className="flex flex-col items-center gap-2">
-                       <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-[0.1em] text-[10px]">
-                         <Shield size={10} />
-                         {u.role}
-                       </div>
-                       <select 
-                         value={u.role}
-                         onChange={async (e) => {
-                           const newRole = e.target.value;
-                           try {
-                             const res = await fetch(`/api/users/${u.id}/role`, {
-                               method: 'PATCH',
-                               headers: { 
-                                 'Content-Type': 'application/json',
-                                 Authorization: `Bearer ${token}` 
-                               },
-                               body: JSON.stringify({ role: newRole })
-                             });
-                             if (res.ok) {
-                               setUsers(prev => prev.map(user => user.id === u.id ? { ...user, role: newRole } : user));
-                             }
-                           } catch (err) {
-                             console.error('Failed to update role');
-                           }
-                         }}
-                         className="bg-zinc-50 border border-zinc-100 rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest text-zinc-400 outline-none hover:border-primary transition-all cursor-pointer"
-                       >
-                         <option value="CLIENT">Client</option>
-                         <option value="DESIGNER">Designer</option>
-                         <option value="ADMIN">Admin</option>
-                       </select>
+                      <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-[0.1em] text-[10px]">
+                        <Shield size={10} />
+                        {u.role}
+                      </div>
+                      <select
+                        value={u.role}
+                        onChange={async (e) => {
+                          const newRole = e.target.value;
+                          try {
+                            const res = await fetch(`/api/users/${u.id}/role`, {
+                              method: 'PATCH',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ role: newRole }),
+                            });
+
+                            if (res.ok) {
+                              setUsers((prev) => prev.map((user) => (user.id === u.id ? { ...user, role: newRole } : user)));
+                            }
+                          } catch (err) {
+                            console.error('Failed to update role');
+                          }
+                        }}
+                        className="bg-zinc-50 border border-zinc-100 rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest text-zinc-400 outline-none hover:border-primary transition-all cursor-pointer"
+                      >
+                        <option value="CLIENT">Client</option>
+                        <option value="DESIGNER">Designer</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
                     </div>
                   </div>
 
