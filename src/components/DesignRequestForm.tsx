@@ -132,17 +132,17 @@ export function DesignRequestForm() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 md:space-y-20 pb-32">
       {/* Progress Header */}
-      <div className="bg-white/90 backdrop-blur-md p-3 md:p-6 rounded-[24px] md:rounded-[32px] border border-zinc-100 shadow-lg sticky top-20 md:top-24 z-20 scroll-smooth mb-4 md:mb-0">
-        <div className="grid grid-cols-5 md:flex md:justify-between items-center gap-2 md:gap-0 px-1 md:px-4">
+      <div className="bg-white p-4 md:p-6 rounded-[32px] border border-zinc-100 shadow-sm relative md:sticky md:top-24 z-20 scroll-smooth mb-8 md:mb-16">
+        <div className="flex flex-wrap justify-center md:flex-nowrap md:justify-between items-center gap-x-6 gap-y-5 md:gap-0 px-2 md:px-4">
           {steps.map((step) => (
             <div key={step.id} className="flex flex-col items-center gap-1.5 group cursor-pointer" onClick={() => setCurrentStep(step.id)}>
               <div className={`
-                w-7 h-7 md:w-11 md:h-11 rounded-lg md:rounded-xl flex items-center justify-center transition-all duration-300
+                w-8 h-8 md:w-11 md:h-11 rounded-lg md:rounded-xl flex items-center justify-center transition-all duration-300
                 ${currentStep >= step.id ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-zinc-100 text-zinc-400 group-hover:bg-zinc-200'}
               `}>
-                <step.icon size={14} className="md:w-5 md:h-5" />
+                <step.icon size={15} className="md:w-5 md:h-5" />
               </div>
-              <span className={`text-[6px] md:text-[9px] font-black uppercase tracking-widest text-center leading-tight ${currentStep === step.id ? 'text-zinc-950' : 'text-zinc-400'}`}>
+              <span className={`text-[7px] md:text-[9px] font-black uppercase tracking-widest text-center leading-tight ${currentStep === step.id ? 'text-zinc-950' : 'text-zinc-400'}`}>
                 {step.title.split(' ')[0]}
               </span>
             </div>
