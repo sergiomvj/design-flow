@@ -204,15 +204,23 @@ function getConnectionString() {
 }
 
 function buildPoolConfig(): PoolConfig {
-  const connectionString = getConnectionString();
-  const connectionUrl = new URL(connectionString);
+  const rawConnectionString = getConnectionString();
+  const connectionUrl = new URL(rawConnectionString);
   const sslMode = (connectionUrl.searchParams.get('sslmode') ?? process.env.PGSSLMODE ?? '').toLowerCase();
+  const normalizedSslMode = sslMode === 'no-verify' ? 'require' : sslMode;
   const shouldUseSsl =
     connectionUrl.hostname.includes('supabase') ||
-    ['require', 'prefer', 'verify-ca', 'verify-full'].includes(sslMode);
+    ['require', 'prefer', 'verify-ca', 'verify-full'].includes(normalizedSslMode);
+
+  // node-postgres lets SSL query params in the URL override the `ssl` object.
+  // Strip them so we control TLS behavior explicitly here.
+  connectionUrl.searchParams.delete('sslmode');
+  connectionUrl.searchParams.delete('sslcert');
+  connectionUrl.searchParams.delete('sslkey');
+  connectionUrl.searchParams.delete('sslrootcert');
 
   return {
-    connectionString,
+    connectionString: connectionUrl.toString(),
     ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
   };
 }
