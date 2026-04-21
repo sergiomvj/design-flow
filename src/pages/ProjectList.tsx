@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, Filter, MoreVertical, ExternalLink, Clock } from 'lucide-react';
+import { Search, Filter, MoreVertical, ExternalLink, Clock, Edit } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -147,6 +147,17 @@ export function ProjectList() {
                           <span className="hidden sm:inline">Details</span>
                           <ExternalLink size={18} />
                         </button>
+                        
+                        {user?.role === 'ADMIN' && (
+                          <button 
+                            onClick={() => navigate(`/projects/edit/${p.id}`)}
+                            className="p-2 text-zinc-400 hover:text-zinc-950 transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                          >
+                            <span className="hidden sm:inline">Edit</span>
+                            <Edit size={18} />
+                          </button>
+                        )}
+
                         <button className="p-2 text-zinc-400 hover:text-zinc-950 transition-colors">
                           <MoreVertical size={18} />
                         </button>
