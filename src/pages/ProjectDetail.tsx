@@ -122,10 +122,10 @@ export function ProjectDetail() {
             <span className="hidden sm:inline">Export PDF</span>
           </button>
 
-          {user?.role === 'ADMIN' && (
+          {(user?.role === 'ADMIN' || project.requesterId === user?.id) && (
             <Link 
               to={`/projects/edit/${id}`}
-              className="flex items-center gap-3 bg-zinc-950 text-white hover:bg-zinc-800 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl"
+              className="flex items-center gap-3 bg-primary text-white hover:bg-primary/90 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-primary/20"
             >
               <Edit size={18} />
               <span className="hidden sm:inline">Edit Briefing</span>
