@@ -35,6 +35,10 @@ function AppContent() {
         token ? <Layout><DesignRequestForm /></Layout> : <Navigate to="/login" />
       } />
 
+      <Route path="/projects/edit/:id" element={
+        token ? <Layout><DesignRequestForm /></Layout> : <Navigate to="/login" />
+      } />
+
       <Route path="/projects/:status" element={
         token ? <Layout><ProjectList /></Layout> : <Navigate to="/login" />
       } />

@@ -1,25 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { 
-  User, 
-  MousePointer2,
-  FileText,
-  Ruler,
-  UploadCloud,
-  Calendar,
-  ShieldCheck,
-  Send,
-  Briefcase,
-  Monitor,
-  Printer,
-  Video,
-  ArrowRight,
-  ArrowLeft,
-  Settings,
-  AlertCircle
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 
 const steps = [
   { id: 1, title: 'Requester', icon: User },
@@ -34,10 +14,13 @@ const steps = [
 ];
 
 export function DesignRequestForm() {
+  const { id } = useParams();
+  const isEditing = !!id;
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [designers, setDesigners] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     // Bloco 1: Requester
     company: '',
@@ -94,12 +77,56 @@ export function DesignRequestForm() {
     // Bloco 8: Internal
     priority: 'MEDIUM',
     internalNotes: '',
+    designerId: '',
     
     // Bloco 9: Confirmation
     isConfirmed: false,
     briefingAware: false,
     validationAware: false,
   });
+
+  useEffect(() => {
+    if (isEditing) {
+      const fetchProject = async () => {
+        try {
+          const res = await fetch(`/api/projects/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            // Format dates for input type="date" (YYYY-MM-DD)
+            const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : '';
+            
+            setFormData({
+              ...data,
+              deadline: formatDate(data.deadline),
+              eventDate: formatDate(data.eventDate),
+              designerId: data.designerId || ''
+            });
+          }
+        } catch (err) {
+          console.error('Failed to load project for editing');
+        }
+      };
+      fetchProject();
+    }
+
+    const fetchDesigners = async () => {
+      if (user?.role !== 'ADMIN') return;
+      try {
+        const res = await fetch('/api/users', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const allUsers = await res.json();
+          setDesigners(allUsers.filter((u: any) => u.role === 'DESIGNER'));
+        }
+      } catch (err) {
+        console.error('Failed to fetch designers');
+      }
+    };
+    fetchDesigners();
+  }, [id, isEditing, token, user]);
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -111,8 +138,11 @@ export function DesignRequestForm() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
+      const url = isEditing ? `/api/projects/${id}` : '/api/projects';
+      const method = isEditing ? 'PATCH' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -120,7 +150,7 @@ export function DesignRequestForm() {
         body: JSON.stringify(formData),
       });
       if (res.ok) {
-        navigate('/');
+        navigate(isEditing ? `/projects/detail/${id}` : '/');
       } else {
         const errorData = await res.json();
         alert(`Failed to save project: ${errorData.error || 'Unknown error'}`);
@@ -281,7 +311,22 @@ export function DesignRequestForm() {
             <Section icon={Settings} title="Internal Control">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <Select label="INTERNAL PRIORITY" options={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']} value={formData.priority} onChange={v => updateField('priority', v)} />
-                <TextArea label="INTERNAL NOTES" value={formData.internalNotes} onChange={v => updateField('internalNotes', v)} rows={3} />
+                {user?.role === 'ADMIN' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">Assign Designer</label>
+                    <select 
+                      value={formData.designerId}
+                      onChange={e => updateField('designerId', e.target.value)}
+                      className="w-full bg-zinc-50 border border-zinc-100 focus:bg-white focus:border-primary/20 p-4 rounded-2xl outline-none text-sm font-bold text-zinc-950 transition-all appearance-none"
+                    >
+                      <option value="">Unassigned</option>
+                      {designers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="md:col-span-2">
+                   <TextArea label="INTERNAL NOTES" value={formData.internalNotes} onChange={v => updateField('internalNotes', v)} rows={3} />
+                </div>
               </div>
             </Section>
           )}
@@ -302,7 +347,7 @@ export function DesignRequestForm() {
                   disabled={loading}
                   className="signature-gradient w-full md:w-auto px-16 py-5 md:py-6 rounded-[20px] md:rounded-[24px] text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
                 >
-                  {loading ? 'Processing...' : 'Submit Requisition'}
+                  {loading ? 'Processing...' : isEditing ? 'Update Requisition' : 'Submit Requisition'}
                   <Send size={18} />
                 </button>
               </div>
