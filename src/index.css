@@ -49,3 +49,76 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@media print {
+  @page {
+    margin: 2cm;
+  }
+
+  /* Hide UI elements */
+  nav, 
+  header, 
+  aside, 
+  .no-print,
+  button:not(.print-visible) {
+    display: none !important;
+  }
+
+  /* Reset layout margins */
+  main, .lg\:ml-72 {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 10pt;
+  }
+
+  /* Content aesthetics for print */
+  .bg-zinc-950 {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #e4e4e7 !important;
+  }
+
+  .text-white {
+    color: black !important;
+  }
+
+  .border, .border-zinc-100 {
+    border: 1px solid #e4e4e7 !important;
+  }
+
+  .rounded-\[40px\], .rounded-\[32px\], .rounded-xl {
+    border-radius: 12pt !important;
+  }
+
+  .shadow-sm, .shadow-md, .shadow-xl, .shadow-2xl {
+    shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Force grid columns to behave if needed or expand items */
+  .grid {
+    display: block !important;
+  }
+  
+  .grid > * {
+    margin-bottom: 20pt !important;
+    page-break-inside: avoid;
+  }
+
+  section {
+    page-break-inside: avoid;
+    margin-bottom: 30pt;
+  }
+
+  /* Status progress bar adjustments for print */
+  .signature-gradient {
+    background: #f4f4f5 !important;
+    color: black !important;
+    border: 1px solid #000 !important;
+  }
+}

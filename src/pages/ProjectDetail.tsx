@@ -9,9 +9,9 @@ import {
   Ruler, 
   ShieldCheck, 
   UploadCloud,
-  ExternalLink,
   User,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusProgress } from '../components/StatusProgress';
@@ -66,10 +66,20 @@ export function ProjectDetail() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-20">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-950 font-black text-xs uppercase tracking-widest transition-all">
-        <ArrowLeft size={18} />
-        Back to Pipeline
-      </button>
+      <div className="flex justify-between items-center no-print">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-950 font-black text-xs uppercase tracking-widest transition-all">
+          <ArrowLeft size={18} />
+          Back to Pipeline
+        </button>
+        
+        <button 
+          onClick={() => window.print()}
+          className="flex items-center gap-3 bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-950 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-sm"
+        >
+          <Printer size={18} />
+          Export PDF
+        </button>
+      </div>
 
       {/* Header Info */}
       <div className="bg-white border border-zinc-100 p-8 md:p-12 rounded-[40px] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
