@@ -9,6 +9,7 @@ import { DesignRequestForm } from './components/DesignRequestForm';
 import { ProjectList } from './pages/ProjectList';
 import { Team } from './pages/Team';
 import { Settings } from './pages/Settings';
+import { ProjectDetail } from './pages/ProjectDetail';
 
 function AppContent() {
   const { token, loading, user } = useAuth();
@@ -36,6 +37,10 @@ function AppContent() {
 
       <Route path="/projects/:status" element={
         token ? <Layout><ProjectList /></Layout> : <Navigate to="/login" />
+      } />
+
+      <Route path="/projects/detail/:id" element={
+        token ? <Layout><ProjectDetail /></Layout> : <Navigate to="/login" />
       } />
 
       <Route path="/team" element={

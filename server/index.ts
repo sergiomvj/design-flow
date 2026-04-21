@@ -143,13 +143,19 @@ app.get('/api/auth/me', async (req, res) => {
 
 app.get('/api/projects', async (_req, res) => {
   if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const projects = await prisma.project.findMany({ orderBy: { createdAt: 'desc' } });
+  const projects = await prisma.project.findMany({ 
+    include: { requester: true, designer: true },
+    orderBy: { createdAt: 'desc' } 
+  });
   res.json(projects);
 });
 
 app.get('/api/projects/:id', async (req, res) => {
   if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+  const project = await prisma.project.findUnique({ 
+    where: { id: req.params.id },
+    include: { requester: true, designer: true, comments: { include: { user: true } } }
+  });
   if (!project) return res.status(404).json({ error: 'Project not found' });
   res.json(project);
 });

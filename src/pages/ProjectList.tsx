@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, Filter, MoreVertical, ExternalLink } from 'lucide-react';
+import { Search, Filter, MoreVertical, ExternalLink, Clock } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -10,12 +10,13 @@ interface Project {
   company: string;
   nature: string;
   createdAt: string;
-  requester: { name: string };
+  requester?: { name: string };
   designer?: { name: string };
 }
 
 export function ProjectList() {
   const { status } = useParams();
+  const navigate = useNavigate();
   const { token, user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,9 +125,9 @@ export function ProjectList() {
                     <td className="px-6 md:px-8 py-5 md:py-6">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 md:w-8 md:h-8 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-400 font-black text-[10px] uppercase">
-                          {p.requester.name.charAt(0)}
+                          {p.requester?.name.charAt(0) || '?'}
                         </div>
-                        <span className="text-sm font-bold text-zinc-600 tracking-tight">{p.requester.name}</span>
+                        <span className="text-sm font-bold text-zinc-600 tracking-tight">{p.requester?.name || 'Unknown'}</span>
                       </div>
                     </td>
                     <td className="px-6 md:px-8 py-5 md:py-6">
@@ -139,7 +140,11 @@ export function ProjectList() {
                     </td>
                     <td className="px-6 md:px-8 py-5 md:py-6 text-right">
                       <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 text-zinc-400 hover:text-primary transition-colors">
+                        <button 
+                          onClick={() => navigate(`/projects/detail/${p.id}`)}
+                          className="p-2 text-zinc-400 hover:text-primary transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                        >
+                          <span className="hidden sm:inline">Details</span>
                           <ExternalLink size={18} />
                         </button>
                         <button className="p-2 text-zinc-400 hover:text-zinc-950 transition-colors">

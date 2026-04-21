@@ -158,8 +158,12 @@ export function Dashboard() {
                       {new Date(project.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-4 md:py-5 text-right">
-                      <button className="p-2 text-zinc-300 hover:text-zinc-950 transition-colors">
-                        <MoreVertical size={18} />
+                      <button 
+                        onClick={() => navigate(`/projects/detail/${project.id}`)}
+                        className="p-2 text-zinc-300 hover:text-primary transition-colors flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                      >
+                        <span className="hidden sm:inline">Details</span>
+                        <ArrowUpRight size={18} />
                       </button>
                     </td>
                   </tr>
