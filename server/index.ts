@@ -5,9 +5,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { getPrisma } from '../prisma/db';
 
 dotenv.config();
 
@@ -17,24 +15,15 @@ const __dirname = path.dirname(__filename);
 console.log('[SERVER] Starting...');
 console.log('[SERVER] DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 
-const dbUrl = process.env.DATABASE_URL;
 let prisma: any;
-
-if (dbUrl) {
-  try {
-    const pool = new Pool({ connectionString: dbUrl });
-    const adapter = new PrismaPg(pool);
-    prisma = new PrismaClient({ adapter });
-    console.log('[DATABASE] Connecting...');
-    prisma.$connect()
-      .then(() => console.log('[DATABASE] ✓ Connected'))
-      .catch((err: any) => console.error('[DATABASE] ERROR:', err.message));
-  } catch (err: any) {
-    console.error('[DATABASE] INIT ERROR:', err.message);
-    prisma = null;
-  }
-} else {
-  console.warn('[DATABASE] No URL, skipping');
+try {
+  prisma = getPrisma();
+  console.log('[DATABASE] Connecting...');
+  prisma.$connect()
+    .then(() => console.log('[DATABASE] ✓ Connected'))
+    .catch((err: any) => console.error('[DATABASE] ERROR:', err.message));
+} catch (err: any) {
+  console.error('[DATABASE] INIT ERROR:', err.message);
   prisma = null;
 }
 
