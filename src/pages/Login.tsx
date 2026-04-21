@@ -26,7 +26,7 @@ export function Login() {
         login(data.token, data.user);
         navigate('/');
       } else {
-        setError(data.error);
+        setError(data.details ? `${data.error}: ${data.details}` : (data.error || 'Login failed'));
       }
     } catch (err) {
       setError('Connection failed');

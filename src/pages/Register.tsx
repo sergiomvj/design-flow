@@ -51,7 +51,7 @@ export function Register() {
       if (res.ok) {
         navigate('/login');
       } else {
-        setError(data.error || 'Registration failed');
+        setError(data.details ? `${data.error}: ${data.details}` : (data.error || 'Registration failed'));
       }
     } catch {
       setError('Connection failed');
