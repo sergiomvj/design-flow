@@ -5,12 +5,15 @@ import { Pool } from 'pg';
 let prisma: PrismaClient;
 
 export function createPrismaClient(dbUrl: string): PrismaClient {
+  // Se for PostgreSQL (VPS), usa o adaptador
   if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
     const pool = new Pool({ connectionString: dbUrl });
     const adapter = new PrismaPg(pool);
     return new PrismaClient({ adapter });
   }
-  // Para SQLite ou outros, usa o cliente padrão sem adaptador de Postgres
+  
+  // Para SQLite local no Prisma 7, usamos o construtor padrão
+  // Ele lerá a DATABASE_URL do arquivo .env automaticamente
   return new PrismaClient();
 }
 
