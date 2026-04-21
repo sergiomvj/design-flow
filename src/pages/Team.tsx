@@ -85,9 +85,37 @@ export function Team() {
 
                   <div className="space-y-1">
                     <h3 className="text-lg font-black tracking-tight text-zinc-950">{u.name}</h3>
-                    <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-[0.1em] text-[9px]">
-                      <Shield size={10} />
-                      {u.role}
+                    <div className="flex flex-col items-center gap-2">
+                       <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-[0.1em] text-[10px]">
+                         <Shield size={10} />
+                         {u.role}
+                       </div>
+                       <select 
+                         value={u.role}
+                         onChange={async (e) => {
+                           const newRole = e.target.value;
+                           try {
+                             const res = await fetch(`/api/users/${u.id}/role`, {
+                               method: 'PATCH',
+                               headers: { 
+                                 'Content-Type': 'application/json',
+                                 Authorization: `Bearer ${token}` 
+                               },
+                               body: JSON.stringify({ role: newRole })
+                             });
+                             if (res.ok) {
+                               setUsers(prev => prev.map(user => user.id === u.id ? { ...user, role: newRole } : user));
+                             }
+                           } catch (err) {
+                             console.error('Failed to update role');
+                           }
+                         }}
+                         className="bg-zinc-50 border border-zinc-100 rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest text-zinc-400 outline-none hover:border-primary transition-all cursor-pointer"
+                       >
+                         <option value="CLIENT">Client</option>
+                         <option value="DESIGNER">Designer</option>
+                         <option value="ADMIN">Admin</option>
+                       </select>
                     </div>
                   </div>
 

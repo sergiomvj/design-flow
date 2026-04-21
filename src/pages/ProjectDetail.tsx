@@ -21,9 +21,10 @@ import { RequestStatus } from '../types';
 export function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [designers, setDesigners] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchProject() {
@@ -40,8 +41,45 @@ export function ProjectDetail() {
         setLoading(false);
       }
     }
+
+    async function fetchDesigners() {
+      if (user?.role !== 'ADMIN') return;
+      try {
+        const res = await fetch('/api/users', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const allUsers = await res.json();
+          setDesigners(allUsers.filter((u: any) => u.role === 'DESIGNER'));
+        }
+      } catch (err) {
+        console.error('Failed to fetch designers');
+      }
+    }
+
     fetchProject();
-  }, [id, token]);
+    fetchDesigners();
+  }, [id, token, user]);
+
+  const handleAssignDesigner = async (designerId: string) => {
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ designerId })
+      });
+      if (res.ok) {
+        const updatedProject = await res.json();
+        // Refresh local project data
+        setProject((prev: any) => ({ ...prev, designerId: updatedProject.designerId, designer: designers.find(d => d.id === designerId) }));
+      }
+    } catch (err) {
+      console.error('Assignment failed');
+    }
+  };
 
   if (loading) {
     return (
@@ -182,9 +220,22 @@ export function ProjectDetail() {
                 <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center font-black">
                   {project.designer ? project.designer.name.charAt(0) : '?'}
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Designer Assigned</p>
-                  <p className="text-xs font-black text-zinc-950">{project.designer ? project.designer.name : 'Waiting Assignment'}</p>
+                  {user?.role === 'ADMIN' ? (
+                    <select 
+                      value={project.designerId || ''}
+                      onChange={(e) => handleAssignDesigner(e.target.value)}
+                      className="w-full bg-zinc-50 border border-zinc-100 rounded-lg px-2 py-1 text-xs font-bold text-zinc-950 mt-1 outline-none hover:border-primary transition-all cursor-pointer"
+                    >
+                      <option value="">Unassigned</option>
+                      {designers.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs font-black text-zinc-950">{project.designer ? project.designer.name : 'Waiting Assignment'}</p>
+                  )}
                 </div>
               </div>
             </div>
