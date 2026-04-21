@@ -130,20 +130,20 @@ export function DesignRequestForm() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 md:space-y-20 pb-32">
+    <div className="max-w-4xl mx-auto space-y-8 md:space-y-20 pb-32">
       {/* Progress Header */}
-      <div className="bg-white p-3 md:p-6 rounded-[24px] md:rounded-[32px] border border-zinc-100 shadow-sm sticky top-20 md:top-24 z-20 overflow-x-auto no-scrollbar scroll-smooth">
-        <div className="flex justify-between items-center min-w-max md:min-w-full gap-6 md:gap-0 px-2 md:px-4">
+      <div className="bg-white/90 backdrop-blur-md p-3 md:p-6 rounded-[24px] md:rounded-[32px] border border-zinc-100 shadow-lg sticky top-20 md:top-24 z-20 scroll-smooth mb-4 md:mb-0">
+        <div className="grid grid-cols-5 md:flex md:justify-between items-center gap-2 md:gap-0 px-1 md:px-4">
           {steps.map((step) => (
             <div key={step.id} className="flex flex-col items-center gap-1.5 group cursor-pointer" onClick={() => setCurrentStep(step.id)}>
               <div className={`
-                w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all duration-300
+                w-7 h-7 md:w-11 md:h-11 rounded-lg md:rounded-xl flex items-center justify-center transition-all duration-300
                 ${currentStep >= step.id ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-zinc-100 text-zinc-400 group-hover:bg-zinc-200'}
               `}>
-                <step.icon size={16} className="md:w-5 md:h-5" />
+                <step.icon size={14} className="md:w-5 md:h-5" />
               </div>
-              <span className={`text-[7px] md:text-[9px] font-black uppercase tracking-widest ${currentStep === step.id ? 'text-zinc-950' : 'text-zinc-400'}`}>
-                {step.title}
+              <span className={`text-[6px] md:text-[9px] font-black uppercase tracking-widest text-center leading-tight ${currentStep === step.id ? 'text-zinc-950' : 'text-zinc-400'}`}>
+                {step.title.split(' ')[0]}
               </span>
             </div>
           ))}
@@ -156,7 +156,7 @@ export function DesignRequestForm() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="space-y-6 md:space-y-8 px-4 md:px-0"
+          className="space-y-6 md:space-y-8 px-4 md:px-0 pt-2"
         >
           {currentStep === 1 && (
             <Section icon={User} title="Requester Information">
@@ -300,7 +300,7 @@ export function DesignRequestForm() {
       </AnimatePresence>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center bg-white/80 backdrop-blur-md p-4 md:p-6 md:rounded-[32px] border-t md:border border-zinc-100 fixed bottom-0 md:bottom-8 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:max-w-4xl shadow-2xl z-40">
+      <div className="flex justify-between items-center bg-white/90 backdrop-blur-md p-4 md:p-6 md:rounded-[32px] border-t md:border border-zinc-100 fixed bottom-0 md:bottom-8 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:max-w-4xl shadow-2xl z-40">
         <button 
           onClick={prevStep} 
           disabled={currentStep === 1}
