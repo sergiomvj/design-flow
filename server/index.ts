@@ -30,7 +30,7 @@ try {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = 3005;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
 
 console.log('[SERVER] PORT:', PORT);
