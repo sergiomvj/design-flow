@@ -30,8 +30,10 @@ services:
       NODE_ENV: production
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET:-change-me}
+      ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-setup-admin-2024}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-designflow}:${POSTGRES_PASSWORD:-designflow}@webserver2_postgres_designflow:5432/${POSTGRES_DB:-designflow}?sslmode=disable"
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL:-}
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-designflow}:${POSTGRES_PASSWORD:-designflow}@postgres:5432/${POSTGRES_DB:-designflow}?sslmode=disable"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 30s

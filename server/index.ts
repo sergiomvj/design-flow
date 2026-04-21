@@ -7,7 +7,20 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
-import { getPrisma } from '../prisma/db';
+import {
+  createProject,
+  createUser,
+  findProjectById,
+  findUserByEmail,
+  findUserById,
+  getDashboardStats,
+  healthcheck,
+  initializeDatabase,
+  listProjects,
+  listUsers,
+  updateProject,
+  updateUserRole,
+} from './db.ts';
 
 dotenv.config();
 
@@ -15,23 +28,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log('[SERVER] Starting...');
-console.log('[SERVER] DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
-
-let prisma: any;
-try {
-  prisma = getPrisma();
-  console.log('[DATABASE] Connecting...');
-  prisma.$connect()
-    .then(() => console.log('[DATABASE] ✓ Connected'))
-    .catch((err: any) => console.error('[DATABASE] ERROR:', err.message));
-} catch (err: any) {
-  console.error('[DATABASE] INIT ERROR:', err.message);
-  prisma = null;
-}
+console.log('[SERVER] DB URL:', process.env.SUPABASE_DB_URL || process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 
 const app = express();
-const PORT = 3005;
+const PORT = Number(process.env.PORT || 3001);
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
+const ADMIN_SETUP_SECRET = process.env.ADMIN_SETUP_SECRET || 'setup-admin-2024';
 
 console.log('[SERVER] PORT:', PORT);
 
@@ -41,7 +43,6 @@ app.use(express.json());
 const distPath = path.join(__dirname, '../dist');
 const uploadsPath = path.join(__dirname, '../public/uploads');
 
-// Ensure uploads directory exists
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
@@ -49,7 +50,6 @@ if (!fs.existsSync(uploadsPath)) {
 app.use(express.static(distPath));
 app.use('/uploads', express.static(uploadsPath));
 
-// Multer configuration
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsPath);
@@ -57,16 +57,98 @@ const storage = multer.diskStorage({
   filename: (_req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+  },
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: prisma ? 'ok' : 'no-db' });
+const databaseReady = initializeDatabase()
+  .then(async () => {
+    await healthcheck();
+    console.log('[DATABASE] Connected');
+  })
+  .catch((error: unknown) => {
+    console.error('[DATABASE] INIT ERROR:', getErrorMessage(error));
+    throw error;
+  });
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Unknown error';
+}
+
+function isUniqueViolation(error: any) {
+  return error?.code === '23505';
+}
+
+async function ensureDatabase(res: express.Response) {
+  try {
+    await databaseReady;
+    return true;
+  } catch (error) {
+    res.status(503).json({ error: 'Database unavailable', details: getErrorMessage(error) });
+    return false;
+  }
+}
+
+function getTokenPayload(req: express.Request, res: express.Response) {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+
+  try {
+    return jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+    return null;
+  }
+}
+
+function sanitizeProjectBody(body: Record<string, any>) {
+  const sanitized = { ...body };
+
+  delete sanitized.id;
+  delete sanitized.requester;
+  delete sanitized.designer;
+  delete sanitized.comments;
+  delete sanitized.createdAt;
+  delete sanitized.updatedAt;
+
+  if (sanitized.deadline === '') {
+    sanitized.deadline = null;
+  } else if (sanitized.deadline) {
+    sanitized.deadline = new Date(sanitized.deadline);
+  }
+
+  if (sanitized.eventDate === '') {
+    sanitized.eventDate = null;
+  } else if (sanitized.eventDate) {
+    sanitized.eventDate = new Date(sanitized.eventDate);
+  }
+
+  if (sanitized.designerId === '') {
+    sanitized.designerId = null;
+  }
+
+  return sanitized;
+}
+
+app.get('/api/health', async (_req, res) => {
+  try {
+    await healthcheck();
+    res.json({ status: 'ok', time: new Date().toISOString(), database: true });
+  } catch (error) {
+    res.status(503).json({ status: 'error', database: false, details: getErrorMessage(error) });
+  }
 });
 
 app.get('/favicon.ico', (_req, res) => {
@@ -74,49 +156,66 @@ app.get('/favicon.ico', (_req, res) => {
 });
 
 app.post('/api/admin/setup', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
+  if (!(await ensureDatabase(res))) return;
+
   const { email, password, name } = req.body;
   const secret = req.headers['x-admin-secret'];
-  if (secret !== 'setup-admin-2024') {
+
+  if (secret !== ADMIN_SETUP_SECRET) {
     return res.status(403).json({ error: 'Invalid secret' });
   }
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name, role: 'ADMIN' },
+    const user = await createUser({
+      email,
+      password: hashedPassword,
+      name,
+      role: 'ADMIN',
     });
-    res.json({ id: user.id, email: user.email, role: user.role });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+
+    res.json({ id: user?.id, email: user?.email, role: user?.role });
+  } catch (error) {
+    res.status(isUniqueViolation(error) ? 409 : 400).json({ error: getErrorMessage(error) });
   }
 });
 
 app.post('/api/auth/register', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
+  if (!(await ensureDatabase(res))) return;
+
   const { email, password, name, role } = req.body;
+
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+
   console.log('[AUTH] Register:', email, 'role:', role || 'CLIENT');
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name, role: role || 'CLIENT' },
+    const user = await createUser({
+      email,
+      password: hashedPassword,
+      name,
+      role: role || 'CLIENT',
     });
-    console.log('[AUTH] Created:', user.id);
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
-  } catch (err: any) {
-    console.error('[AUTH] Error:', err.message);
+
+    console.log('[AUTH] Created:', user?.id);
+    res.json(user);
+  } catch (error) {
+    console.error('[AUTH] Error:', getErrorMessage(error));
+
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
     res.status(400).json({ error: 'Registration failed' });
   }
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), database: !!prisma });
-});
-
 app.post('/api/auth/login', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
+  if (!(await ensureDatabase(res))) return;
+
   const { email, password } = req.body;
   console.log('[AUTH] Login attempt:', email, 'Body keys:', Object.keys(req.body));
 
@@ -126,245 +225,202 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findUserByEmail(email);
+
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET);
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-  } catch (err: any) {
-    console.error('[AUTH] Login error:', err.message);
+  } catch (error) {
+    console.error('[AUTH] Login error:', getErrorMessage(error));
     res.status(500).json({ error: 'Login failed' });
   }
 });
 
 app.get('/api/auth/me', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+  if (!(await ensureDatabase(res))) return;
+
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
+
+  const user = await findUserById(decoded.userId);
+
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  res.json(user);
 });
 
 app.get('/api/projects', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await ensureDatabase(res))) return;
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    let where = {};
-    if (decoded.role === 'DESIGNER') {
-      where = { designerId: decoded.userId };
-    } else if (decoded.role === 'CLIENT') {
-      where = { requesterId: decoded.userId };
-    }
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
 
-    const projects = await prisma.project.findMany({ 
-      where,
-      include: { requester: true, designer: true },
-      orderBy: { createdAt: 'desc' } 
-    });
-    res.json(projects);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
+  const filters =
+    decoded.role === 'DESIGNER'
+      ? { designerId: decoded.userId }
+      : decoded.role === 'CLIENT'
+        ? { requesterId: decoded.userId }
+        : {};
+
+  const projects = await listProjects(filters);
+  res.json(projects);
 });
 
 app.get('/api/projects/:id', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await ensureDatabase(res))) return;
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const project = await prisma.project.findUnique({ 
-      where: { id: req.params.id },
-      include: { requester: true, designer: true, comments: { include: { user: true } } }
-    });
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
 
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+  const project = await findProjectById(req.params.id);
 
-    // ACL Check
-    const isAdmin = decoded.role === 'ADMIN';
-    const isRequester = project.requesterId === decoded.userId;
-    const isDesigner = project.designerId === decoded.userId;
+  if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    if (!isAdmin && !isRequester && !isDesigner) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+  const isAdmin = decoded.role === 'ADMIN';
+  const isRequester = project.requesterId === decoded.userId;
+  const isDesigner = project.designerId === decoded.userId;
 
-    res.json(project);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
+  if (!isAdmin && !isRequester && !isDesigner) {
+    return res.status(403).json({ error: 'Access denied' });
   }
+
+  res.json(project);
 });
 
 app.post('/api/projects', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-  
+  if (!(await ensureDatabase(res))) return;
+
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
+
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
-    // Restriction: Only ADMIN can start new jobs
     if (decoded.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Only administrators can start new jobs' });
     }
 
-    const body = { ...req.body };
-    
-    // Sanitize dates: empty strings to null, valid strings to Date objects
-    if (body.deadline === '') body.deadline = null;
-    else if (body.deadline) body.deadline = new Date(body.deadline);
-    
-    if (body.eventDate === '') body.eventDate = null;
-    else if (body.eventDate) body.eventDate = new Date(body.eventDate);
-
+    const body = sanitizeProjectBody(req.body);
     const data = { ...body, requesterId: decoded.userId };
+
     console.log('[PROJECTS] Creating project for:', decoded.userId);
-    
-    const project = await prisma.project.create({ data });
+
+    const project = await createProject(data);
     res.json(project);
-  } catch (err: any) {
-    console.error('[PROJECTS] Creation error:', err.message);
-    if (err.name === 'JsonWebTokenError') {
+  } catch (error: any) {
+    console.error('[PROJECTS] Creation error:', getErrorMessage(error));
+
+    if (error?.name === 'JsonWebTokenError') {
       return res.status(401).json({ error: 'Invalid token' });
     }
-    res.status(500).json({ error: 'Failed to create project', details: err.message });
+
+    res.status(500).json({ error: 'Failed to create project', details: getErrorMessage(error) });
   }
 });
 
 app.post('/api/upload', upload.array('files'), (req, res) => {
   try {
     const files = req.files as Express.Multer.File[];
+
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
-    
-    const urls = files.map(file => `/uploads/${file.filename}`);
+
+    const urls = files.map((file) => `/uploads/${file.filename}`);
     res.json({ urls });
-  } catch (err: any) {
-    console.error('[UPLOAD] Error:', err.message);
+  } catch (error) {
+    console.error('[UPLOAD] Error:', getErrorMessage(error));
     res.status(500).json({ error: 'Upload failed' });
   }
 });
 
 app.get('/api/dashboard/stats', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await ensureDatabase(res))) return;
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    let where = {};
-    if (decoded.role === 'DESIGNER') {
-      where = { designerId: decoded.userId };
-    } else if (decoded.role === 'CLIENT') {
-      where = { requesterId: decoded.userId };
-    }
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
 
-    const [total, active, waiting, production, completed] = await Promise.all([
-      prisma.project.count({ where }),
-      prisma.project.count({ where: { ...where, status: { not: 'COMPLETED' } } }),
-      prisma.project.count({ where: { ...where, status: 'WAITING_APPROVAL' } }),
-      prisma.project.count({ where: { ...where, status: 'IN_PRODUCTION' } }),
-      prisma.project.count({ where: { ...where, status: 'COMPLETED' } }),
-    ]);
+  const filters =
+    decoded.role === 'DESIGNER'
+      ? { designerId: decoded.userId }
+      : decoded.role === 'CLIENT'
+        ? { requesterId: decoded.userId }
+        : {};
 
-    res.json({
-      totalProjects: total,
-      activeProjects: active,
-      waitingApproval: waiting,
-      inProduction: production,
-      completedProjects: completed
-    });
-  } catch (err: any) {
-    console.error('[STATS] Error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
-  }
+  const stats = await getDashboardStats(filters);
+  res.json(stats);
 });
 
 app.get('/api/users', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await ensureDatabase(res))) return;
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    if (decoded.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
 
-    const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
-      orderBy: { name: 'asc' }
-    });
-    res.json(users);
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
+  if (decoded.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Admin only' });
   }
+
+  const users = await listUsers();
+  res.json(users);
 });
 
-// Admin Route: Update user role
 app.patch('/api/users/:id/role', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await ensureDatabase(res))) return;
+
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
+
+  if (decoded.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    if (decoded.role !== 'ADMIN') return res.status(403).json({ error: 'Admin only' });
+    const user = await updateUserRole(req.params.id, req.body.role);
 
-    const user = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { role: req.body.role }
-    });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     res.json({ id: user.id, role: user.role });
-  } catch (err) {
+  } catch {
     res.status(400).json({ error: 'Failed to update user role' });
   }
 });
 
 app.patch('/api/projects/:id', async (req, res) => {
-  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await ensureDatabase(res))) return;
+
+  const decoded = getTokenPayload(req, res);
+  if (!decoded) return;
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
     console.log(`[PROJECTS] Updating project ${req.params.id} by ${decoded.userId}`);
 
-    const body = { ...req.body };
+    const currentProject = await findProjectById(req.params.id);
 
-    // Remove relational and metadata fields that shouldn't be updated directly via query
-    delete body.id;
-    delete body.requester;
-    delete body.designer;
-    delete body.comments;
-    delete body.createdAt;
-    delete body.updatedAt;
+    if (!currentProject) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
 
-    // Sanitize dates
-    if (body.deadline === '') body.deadline = null;
-    else if (body.deadline) body.deadline = new Date(body.deadline);
-    
-    if (body.eventDate === '') body.eventDate = null;
-    else if (body.eventDate) body.eventDate = new Date(body.eventDate);
+    const canEdit =
+      decoded.role === 'ADMIN' ||
+      currentProject.requesterId === decoded.userId ||
+      currentProject.designerId === decoded.userId;
 
-    const project = await prisma.project.update({
-      where: { id: req.params.id },
-      data: body,
-    });
+    if (!canEdit) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const body = sanitizeProjectBody(req.body);
+    const project = await updateProject(req.params.id, body);
     res.json(project);
-  } catch (err: any) {
-    console.error('[PROJECTS] Update error:', err.message);
-    res.status(400).json({ error: 'Update failed', details: err.message });
+  } catch (error) {
+    console.error('[PROJECTS] Update error:', getErrorMessage(error));
+    res.status(400).json({ error: 'Update failed', details: getErrorMessage(error) });
   }
 });
 
@@ -373,4 +429,4 @@ app.get('*', (_req, res) => {
 });
 
 console.log('[SERVER] Ready on port', PORT);
-app.listen(Number(PORT), '0.0.0.0');
+app.listen(PORT, '0.0.0.0');

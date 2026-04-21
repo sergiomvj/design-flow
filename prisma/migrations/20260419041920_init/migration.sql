@@ -1,3 +1,0 @@
--- This migration was generated for the previous SQLite prototype.
--- It is intentionally kept as a no-op so PostgreSQL environments can
--- continue applying the canonical init migration that follows.
