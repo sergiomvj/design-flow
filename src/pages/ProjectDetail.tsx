@@ -9,6 +9,7 @@ import {
   Ruler, 
   ShieldCheck, 
   UploadCloud,
+  ExternalLink,
   User,
   AlertCircle,
   Printer
