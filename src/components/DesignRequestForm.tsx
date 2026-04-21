@@ -152,10 +152,7 @@ export function DesignRequestForm() {
       }
     };
     
-    if (token) {
-      if (isEditing) fetchProject();
-      fetchDesigners();
-    }
+    fetchDesigners();
   }, [id, isEditing, token, user?.id, user?.role]);
 
   const updateField = (field: string, value: any) => {
