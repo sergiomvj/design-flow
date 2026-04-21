@@ -134,7 +134,9 @@ export function DesignRequestForm() {
     const fetchDesigners = async () => {
       // Wait for user and token
       if (!token || !user) return;
-      if (user.role !== 'ADMIN') return;
+      // Allow Admin OR anyone in edit mode who was granted access to this page
+      const canSeeDesigners = user.role === 'ADMIN' || isEditing;
+      if (!canSeeDesigners) return;
       
       try {
         console.log('[DEBUG] Fetching designers as ADMIN');
@@ -338,7 +340,7 @@ export function DesignRequestForm() {
             <Section icon={Settings} title="Internal Control">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <Select label="INTERNAL PRIORITY" options={['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']} value={formData.priority} onChange={v => updateField('priority', v)} />
-                {user?.role === 'ADMIN' && (
+                {(user?.role === 'ADMIN' || isEditing) && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">Assign Designer</label>
                     <select 

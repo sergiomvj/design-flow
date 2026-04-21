@@ -236,7 +236,7 @@ export function ProjectDetail() {
                 </div>
                 <div className="flex-1">
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Designer Assigned</p>
-                  {user?.role === 'ADMIN' ? (
+                  {(user?.role === 'ADMIN' || project.requesterId === user?.id) ? (
                     <select 
                       value={project.designerId || ''}
                       onChange={(e) => handleAssignDesigner(e.target.value)}
