@@ -4,7 +4,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
 import { getPrisma } from '../prisma/db';
 
 dotenv.config();
@@ -37,7 +39,31 @@ app.use(cors());
 app.use(express.json());
 
 const distPath = path.join(__dirname, '../dist');
+const uploadsPath = path.join(__dirname, '../public/uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
 app.use(express.static(distPath));
+app.use('/uploads', express.static(uploadsPath));
+
+// Multer configuration
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsPath);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: prisma ? 'ok' : 'no-db' });
@@ -155,6 +181,21 @@ app.post('/api/projects', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
     res.status(500).json({ error: 'Failed to create project', details: err.message });
+  }
+});
+
+app.post('/api/upload', upload.array('files'), (req, res) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+    
+    const urls = files.map(file => `/uploads/${file.filename}`);
+    res.json({ urls });
+  } catch (err: any) {
+    console.error('[UPLOAD] Error:', err.message);
+    res.status(500).json({ error: 'Upload failed' });
   }
 });
 

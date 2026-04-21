@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   User, 
   MousePointer2,
@@ -227,8 +227,16 @@ export function DesignRequestForm() {
           {currentStep === 5 && (
             <Section icon={UploadCloud} title="References and Files">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                <DropZone label="UPLOAD FILES / ASSETS" />
-                <DropZone label="UPLOAD PHOTOS" />
+                <DropZone 
+                  label="UPLOAD FILES / ASSETS" 
+                  value={formData.fileUrls} 
+                  onChange={urls => updateField('fileUrls', urls)} 
+                />
+                <DropZone 
+                  label="UPLOAD PHOTOS" 
+                  value={formData.photoUrls} 
+                  onChange={urls => updateField('photoUrls', urls)} 
+                />
                 <Input label="REFERENCE LINKS" value={formData.referenceLinks} onChange={v => updateField('referenceLinks', v)} />
                 <Input label="EXISTING LOGO (URL)" value={formData.logoUrl} onChange={v => updateField('logoUrl', v)} />
               </div>
@@ -400,11 +408,70 @@ function CardSelect({ label, active, onClick, icon: Icon }: any) {
   );
 }
 
-function DropZone({ label }: { label: string }) {
+function DropZone({ label, value, onChange }: { label: string, value?: string, onChange?: (urls: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const newUrls = data.urls.join(',');
+        const updatedValue = value ? `${value},${newUrls}` : newUrls;
+        if (onChange) onChange(updatedValue);
+      } else {
+        alert('Upload failed');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Error uploading file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const fileCount = value ? value.split(',').filter(Boolean).length : 0;
+
   return (
-    <div className="border-2 border-dashed border-zinc-200 rounded-[32px] p-10 flex flex-col items-center justify-center gap-4 hover:bg-zinc-50 hover:border-primary transition-all cursor-pointer group">
-      <UploadCloud size={32} className="text-zinc-300 group-hover:text-primary transition-colors" />
-      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-zinc-950 transition-colors">{label}</span>
+    <div 
+      onClick={() => fileInputRef.current?.click()}
+      className={`border-2 border-dashed rounded-[32px] p-10 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group relative ${
+        uploading ? 'bg-zinc-50 border-primary' : 'border-zinc-200 hover:bg-zinc-50 hover:border-primary'
+      }`}
+    >
+      <input 
+        type="file" 
+        multiple 
+        className="hidden" 
+        ref={fileInputRef}
+        onChange={handleUpload}
+        disabled={uploading}
+      />
+      <UploadCloud size={32} className={`transition-colors ${uploading ? 'text-primary animate-bounce' : 'text-zinc-300 group-hover:text-primary'}`} />
+      <div className="text-center">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-zinc-950 transition-colors block">
+          {uploading ? 'Uploading...' : label}
+        </span>
+        {fileCount > 0 && (
+          <span className="text-[8px] font-bold text-emerald-600 uppercase mt-1 block">
+            {fileCount} files attached
+          </span>
+        )}
+      </div>
     </div>
   );
 }
