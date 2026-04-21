@@ -106,56 +106,54 @@ export function DesignRequestForm() {
   });
 
   useEffect(() => {
-    if (isEditing) {
-      const fetchProject = async () => {
-        try {
-          const res = await fetch(`/api/projects/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+    const fetchProject = async () => {
+      try {
+        const res = await fetch(`/api/projects/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : '';
+          setFormData({
+            ...data,
+            deadline: formatDate(data.deadline),
+            eventDate: formatDate(data.eventDate),
+            designerId: data.designerId || ''
           });
-          if (res.ok) {
-            const data = await res.json();
-            // Format dates for input type="date" (YYYY-MM-DD)
-            const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : '';
-            
-            setFormData({
-              ...data,
-              deadline: formatDate(data.deadline),
-              eventDate: formatDate(data.eventDate),
-              designerId: data.designerId || ''
-            });
-          }
-        } catch (err) {
-          console.error('Failed to load project for editing');
         }
-      };
-      fetchProject();
-    }
+      } catch (err) {
+        console.error('Failed to load project for editing');
+      }
+    };
 
     const fetchDesigners = async () => {
-      // Wait for user and token
       if (!token || !user) return;
-      // Allow Admin OR anyone in edit mode who was granted access to this page
       const canSeeDesigners = user.role === 'ADMIN' || isEditing;
       if (!canSeeDesigners) return;
       
       try {
-        console.log('[DEBUG] Fetching designers as ADMIN');
         const res = await fetch('/api/users', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
           const allUsers = await res.json();
-          const designerUsers = allUsers.filter((u: any) => u.role === 'DESIGNER');
-          setDesigners(designerUsers);
-          console.log('[DEBUG] Designers loaded:', designerUsers.length);
+          setDesigners(allUsers.filter((u: any) => u.role === 'DESIGNER'));
         }
       } catch (err) {
         console.error('Failed to fetch designers');
       }
     };
-    
-    fetchDesigners();
-  }, [id, isEditing, token, user?.id, user?.role]);
+
+    if (token) {
+      if (isEditing) {
+        fetchProject();
+      } else if (user && user.role !== 'ADMIN') {
+        navigate('/');
+        return;
+      }
+      fetchDesigners();
+    }
+  }, [id, isEditing, token, user?.id, user?.role, navigate]);
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));

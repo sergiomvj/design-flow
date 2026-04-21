@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: PlusCircle, label: 'New Request', path: '/new-request' },
+  { icon: PlusCircle, label: 'New Request', path: '/new-request', roles: ['ADMIN'] },
   { icon: Layers, label: 'Active Projects', path: '/projects/active' },
   { icon: Clock, label: 'Waiting Approval', path: '/projects/waiting' },
   { icon: Inbox, label: 'Production Queue', path: '/projects/production' },

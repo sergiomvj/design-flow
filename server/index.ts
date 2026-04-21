@@ -202,6 +202,12 @@ app.post('/api/projects', async (req, res) => {
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    // Restriction: Only ADMIN can start new jobs
+    if (decoded.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only administrators can start new jobs' });
+    }
+
     const body = { ...req.body };
     
     // Sanitize dates: empty strings to null, valid strings to Date objects

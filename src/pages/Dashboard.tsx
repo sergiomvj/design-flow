@@ -187,15 +187,17 @@ export function Dashboard() {
         </div>
 
         <div className="space-y-6">
-          <div className="signature-gradient rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-white relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-            <h4 className="text-lg md:text-xl font-black tracking-tight mb-2 uppercase">New Requisition</h4>
-            <p className="text-white/60 text-[11px] font-bold mb-8 leading-relaxed">Centralize your briefing and ensure architectural precision in every design piece.</p>
-            <button onClick={() => navigate('/new-request')} className="w-full bg-white text-zinc-950 p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
-              Start Request
-              <ArrowUpRight size={18} />
-            </button>
-          </div>
+          {user?.role === 'ADMIN' && (
+            <div className="signature-gradient rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+              <h4 className="text-lg md:text-xl font-black tracking-tight mb-2 uppercase">New Requisition</h4>
+              <p className="text-white/60 text-[11px] font-bold mb-8 leading-relaxed">Centralize your briefing and ensure architectural precision in every design piece.</p>
+              <button onClick={() => navigate('/new-request')} className="w-full bg-white text-zinc-950 p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3">
+                Start Request
+                <ArrowUpRight size={18} />
+              </button>
+            </div>
+          )}
 
           <div className="bg-zinc-950 rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-zinc-400 border border-white/5">
             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6">Internal Messages</h4>
