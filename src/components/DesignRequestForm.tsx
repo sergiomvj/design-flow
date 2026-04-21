@@ -121,9 +121,13 @@ export function DesignRequestForm() {
       });
       if (res.ok) {
         navigate('/');
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to save project: ${errorData.error || 'Unknown error'}`);
       }
     } catch (err) {
-      console.error('Submission failed');
+      console.error('Submission failed:', err);
+      alert('Network error or server unavailable. Please try again.');
     } finally {
       setLoading(false);
     }

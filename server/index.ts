@@ -132,13 +132,53 @@ app.post('/api/projects', async (req, res) => {
   if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const data = { ...req.body, requesterId: decoded.userId };
+    const body = { ...req.body };
+    
+    // Sanitize dates: empty strings to null, valid strings to Date objects
+    if (body.deadline === '') body.deadline = null;
+    else if (body.deadline) body.deadline = new Date(body.deadline);
+    
+    if (body.eventDate === '') body.eventDate = null;
+    else if (body.eventDate) body.eventDate = new Date(body.eventDate);
+
+    const data = { ...body, requesterId: decoded.userId };
+    console.log('[PROJECTS] Creating project for:', decoded.userId);
+    
     const project = await prisma.project.create({ data });
     res.json(project);
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
+  } catch (err: any) {
+    console.error('[PROJECTS] Creation error:', err.message);
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    res.status(500).json({ error: 'Failed to create project', details: err.message });
+  }
+});
+
+app.get('/api/dashboard/stats', async (_req, res) => {
+  if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const [total, active, waiting, production, completed] = await Promise.all([
+      prisma.project.count(),
+      prisma.project.count({ where: { status: { not: 'COMPLETED' } } }),
+      prisma.project.count({ where: { status: 'WAITING_APPROVAL' } }),
+      prisma.project.count({ where: { status: 'IN_PRODUCTION' } }),
+      prisma.project.count({ where: { status: 'COMPLETED' } }),
+    ]);
+
+    res.json({
+      totalProjects: total,
+      activeProjects: active,
+      waitingApproval: waiting,
+      inProduction: production,
+      completedProjects: completed
+    });
+  } catch (err: any) {
+    console.error('[STATS] Error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
   }
 });
 
