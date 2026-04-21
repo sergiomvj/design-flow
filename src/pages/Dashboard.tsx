@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   MoreVertical,
   Layers,
+  Edit,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -158,13 +159,25 @@ export function Dashboard() {
                       {new Date(project.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-4 md:py-5 text-right">
-                      <button 
-                        onClick={() => navigate(`/projects/detail/${project.id}`)}
-                        className="p-2 text-zinc-300 hover:text-primary transition-colors flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
-                      >
-                        <span className="hidden sm:inline">Details</span>
-                        <ArrowUpRight size={18} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => navigate(`/projects/detail/${project.id}`)}
+                          className="p-2 text-zinc-300 hover:text-primary transition-colors flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                        >
+                          <span className="hidden sm:inline">Details</span>
+                          <ArrowUpRight size={18} />
+                        </button>
+                        
+                        {user?.role === 'ADMIN' && (
+                          <button 
+                            onClick={() => navigate(`/projects/edit/${project.id}`)}
+                            className="p-2 text-zinc-300 hover:text-zinc-950 transition-colors flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                          >
+                            <span className="hidden sm:inline">Edit</span>
+                            <Edit size={18} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
