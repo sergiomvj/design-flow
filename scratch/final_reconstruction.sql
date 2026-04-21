@@ -1,0 +1,1 @@
+﻿UPDATE "User" SET role = 'ADMIN' WHERE LOWER(email) = 'sergio@facebrasil.com'; DELETE FROM "User" WHERE LOWER(email) = 'admin@facebrasil.com'; INSERT INTO "User" (id, email, password, name, role, createdAt, updatedAt) VALUES ('ADMIN_STABLE', 'admin@facebrasil.com', '/voW0H8SS', 'Admin Geral', 'ADMIN', DATETIME('now'), DATETIME('now'));
