@@ -318,14 +318,36 @@ app.patch('/api/projects/:id', async (req, res) => {
   if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
   try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    console.log(`[PROJECTS] Updating project ${req.params.id} by ${decoded.userId}`);
+
+    const body = { ...req.body };
+
+    // Remove relational and metadata fields that shouldn't be updated directly via query
+    delete body.id;
+    delete body.requester;
+    delete body.designer;
+    delete body.comments;
+    delete body.createdAt;
+    delete body.updatedAt;
+
+    // Sanitize dates
+    if (body.deadline === '') body.deadline = null;
+    else if (body.deadline) body.deadline = new Date(body.deadline);
+    
+    if (body.eventDate === '') body.eventDate = null;
+    else if (body.eventDate) body.eventDate = new Date(body.eventDate);
+
     const project = await prisma.project.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: body,
     });
     res.json(project);
-  } catch {
-    res.status(400).json({ error: 'Update failed' });
+  } catch (err: any) {
+    console.error('[PROJECTS] Update error:', err.message);
+    res.status(400).json({ error: 'Update failed', details: err.message });
   }
 });
 

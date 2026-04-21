@@ -132,21 +132,31 @@ export function DesignRequestForm() {
     }
 
     const fetchDesigners = async () => {
-      if (user?.role !== 'ADMIN') return;
+      // Wait for user and token
+      if (!token || !user) return;
+      if (user.role !== 'ADMIN') return;
+      
       try {
+        console.log('[DEBUG] Fetching designers as ADMIN');
         const res = await fetch('/api/users', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
           const allUsers = await res.json();
-          setDesigners(allUsers.filter((u: any) => u.role === 'DESIGNER'));
+          const designerUsers = allUsers.filter((u: any) => u.role === 'DESIGNER');
+          setDesigners(designerUsers);
+          console.log('[DEBUG] Designers loaded:', designerUsers.length);
         }
       } catch (err) {
         console.error('Failed to fetch designers');
       }
     };
-    fetchDesigners();
-  }, [id, isEditing, token, user]);
+    
+    if (token) {
+      if (isEditing) fetchProject();
+      fetchDesigners();
+    }
+  }, [id, isEditing, token, user?.id, user?.role]);
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
