@@ -30,7 +30,7 @@ try {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3005;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret';
 
 console.log('[SERVER] PORT:', PORT);
@@ -111,9 +111,20 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString(), database: !!prisma });
+});
+
 app.post('/api/auth/login', async (req, res) => {
   if (!prisma) return res.status(503).json({ error: 'Database unavailable' });
   const { email, password } = req.body;
+  console.log('[AUTH] Login attempt:', email, 'Body keys:', Object.keys(req.body));
+
+  if (!email || !password) {
+    console.warn('[AUTH] Missing fields in login request');
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
