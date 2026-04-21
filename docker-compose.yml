@@ -1,35 +1,43 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: design-flow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-designflow}
+      POSTGRES_USER: ${POSTGRES_USER:-designflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-designflow}
+    volumes:
+      - design_flow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-designflow} -d ${POSTGRES_DB:-designflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   design-flow:
     build:
       context: .
-      args:
-        GEMINI_API_KEY: ${GEMINI_API_KEY}
     image: design-flow-pro
     container_name: design-flow-pro
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "80:3001"
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=file:/app/data/production.db
-      - JWT_SECRET=${JWT_SECRET:-super-secret-key-change-me}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    volumes:
-      # Volume nomeado: persiste o banco SQLite entre restarts/deploys
-      - design_flow_data:/app/data
-    networks:
-      - design-network
+      NODE_ENV: production
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-designflow}:${POSTGRES_PASSWORD:-designflow}@postgres:5432/${POSTGRES_DB:-designflow}?schema=public"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 10s
-      start_period: 15s
+      start_period: 20s
       retries: 5
 
 volumes:
-  design_flow_data:
-    driver: local
-
-networks:
-  design-network:
-    driver: bridge
+  design_flow_postgres_data:

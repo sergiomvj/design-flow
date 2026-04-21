@@ -1,9 +1,16 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:Super1404@webserver2_postgres_designflow:5432/webserver2?sslmode=disable' });
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is required for seeding');
+}
+
+const pool = new Pool({ connectionString: databaseUrl });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -15,20 +22,23 @@ async function seed() {
   try {
     const user = await prisma.user.upsert({
       where: { email },
-      update: { password: hashedPassword },
+      update: { password: hashedPassword, role: 'ADMIN', name: 'System Administrator' },
       create: {
         email,
         name: 'System Administrator',
         password: hashedPassword,
-        role: 'ADMIN'
-      }
+        role: 'ADMIN',
+      },
     });
+
     console.log('Admin user created/updated:', user.email);
-  } catch (err) {
-    console.error('Seed failed:', err);
   } finally {
     await prisma.$disconnect();
+    await pool.end();
   }
 }
 
-seed();
+seed().catch((error) => {
+  console.error('Seed failed:', error);
+  process.exit(1);
+});

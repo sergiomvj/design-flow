@@ -3,7 +3,6 @@
 # =============================================================================
 FROM node:22-slim AS build
 
-# openssl e ca-certificates necessarios para o Prisma
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     ca-certificates \
@@ -16,11 +15,6 @@ RUN npm install
 
 COPY . .
 
-# O Prisma Client ja e gerado no npm install via postinstall do @prisma/client.
-# Evitamos rodar `prisma generate` novamente no build porque esse passo tem
-# falhado no EasyPanel apesar de nao ser necessario para esta imagem.
-
-# Build do frontend (Vite)
 RUN npm run build
 
 # =============================================================================
@@ -44,9 +38,7 @@ COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/start.sh ./start.sh
 
 RUN chmod +x ./start.sh
-RUN mkdir -p /app/data
 
 EXPOSE 3001
 
-# ENTRYPOINT evita que o EasyPanel sobrescreva o comando de inicializacao com flags invalidas
 ENTRYPOINT ["/app/start.sh"]
