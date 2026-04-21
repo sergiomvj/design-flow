@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -12,7 +12,9 @@ import {
   ExternalLink,
   User,
   AlertCircle,
-  Printer
+  Printer,
+  Edit,
+  ArrowUpRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusProgress } from '../components/StatusProgress';
@@ -111,13 +113,25 @@ export function ProjectDetail() {
           Back to Pipeline
         </button>
         
-        <button 
-          onClick={() => window.print()}
-          className="flex items-center gap-3 bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-950 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-sm"
-        >
-          <Printer size={18} />
-          Export PDF
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-3 bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-950 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-sm"
+          >
+            <Printer size={18} />
+            <span className="hidden sm:inline">Export PDF</span>
+          </button>
+
+          {user?.role === 'ADMIN' && (
+            <Link 
+              to={`/projects/edit/${id}`}
+              className="flex items-center gap-3 bg-zinc-950 text-white hover:bg-zinc-800 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl"
+            >
+              <Edit size={18} />
+              <span className="hidden sm:inline">Edit Briefing</span>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Header Info */}

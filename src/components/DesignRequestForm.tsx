@@ -1,5 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  User, 
+  MousePointer2,
+  FileText,
+  Ruler,
+  UploadCloud,
+  Calendar,
+  ShieldCheck,
+  Send,
+  Briefcase,
+  Monitor,
+  Printer,
+  Video,
+  ArrowRight,
+  ArrowLeft,
+  Settings,
+  AlertCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 
 const steps = [
   { id: 1, title: 'Requester', icon: User },
