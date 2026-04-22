@@ -281,6 +281,28 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/auth/forgot-password', async (req, res) => {
+  if (!(await ensureDatabase(res))) return;
+
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    await findUserByEmail(email);
+
+    res.json({
+      ok: true,
+      message: 'Password recovery is enabled in assisted mode. Contact an administrator to reset your access.',
+    });
+  } catch (error) {
+    console.error('[AUTH] Forgot password error:', getErrorMessage(error));
+    res.status(500).json({ error: 'Failed to process password recovery request' });
+  }
+});
+
 app.get('/api/auth/me', async (req, res) => {
   if (!(await ensureDatabase(res))) return;
 

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Dashboard } from './pages/Dashboard';
 import { DesignRequestForm } from './components/DesignRequestForm';
 import { ProjectList } from './pages/ProjectList';
@@ -26,6 +27,7 @@ function AppContent() {
     <Routes>
       <Route path="/login" element={!token ? <Login /> : <Navigate to="/" />} />
       <Route path="/register" element={!token ? <Register /> : <Navigate to="/" />} />
+      <Route path="/forgot-password" element={!token ? <ForgotPassword /> : <Navigate to="/" />} />
 
       <Route path="/" element={
         token ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />
