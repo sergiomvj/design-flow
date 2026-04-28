@@ -8,6 +8,7 @@ import {
   MoreVertical,
   Layers,
   Edit,
+  Printer,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -67,6 +68,10 @@ export function Dashboard() {
 
     void fetchData();
   }, [token]);
+
+  const handlePrintProject = (projectId: string) => {
+    window.open(`/projects/detail/${projectId}?autoprint=1`, '_blank', 'noopener,noreferrer');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,6 +182,16 @@ export function Dashboard() {
                             <Edit size={18} />
                           </button>
                         )}
+
+                        <button
+                          onClick={() => handlePrintProject(project.id)}
+                          className="p-2 text-zinc-300 hover:text-zinc-950 transition-colors flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                          title="Print project"
+                          aria-label={`Print project ${project.category}`}
+                        >
+                          <span className="hidden sm:inline">Print</span>
+                          <Printer size={18} />
+                        </button>
                       </div>
                     </td>
                   </tr>

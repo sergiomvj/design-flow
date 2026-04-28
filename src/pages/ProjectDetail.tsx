@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -23,6 +23,7 @@ import { RequestStatus } from '../types';
 export function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { token, user } = useAuth();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,18 @@ export function ProjectDetail() {
     fetchProject();
     fetchDesigners();
   }, [id, token, user]);
+
+  useEffect(() => {
+    if (!project || searchParams.get('autoprint') !== '1') {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      window.print();
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [project, searchParams]);
 
   const handleAssignDesigner = async (designerId: string) => {
     try {
@@ -282,7 +295,7 @@ function FileLink({ label, urls, isExternal }: any) {
         {urlList.map((url: string, i: number) => (
           <a 
             key={i}
-            href={url.startsWith('http') ? url : `http://${url}`} 
+            href={url.startsWith('/') ? url : (url.startsWith('http') ? url : `http://${url}`)} 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[9px] font-bold text-white transition-all border border-white/5"

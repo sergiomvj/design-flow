@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  User, 
+import {
+  User,
   MousePointer2,
   FileText,
   Ruler,
@@ -49,13 +49,13 @@ export function DesignRequestForm() {
     department: 'Marketing & Strategy',
     contactMethod: 'Secure Email',
     internalSalesRep: '',
-    
+
     // Bloco 2: Project Type
     projectType: 'BRAND IDENTITY',
     category: 'Corporate',
     nature: 'New Design',
     objective: 'Brand Awareness / Market Presence',
-    
+
     // Bloco 3: Description
     description: '',
     usage: '',
@@ -63,7 +63,7 @@ export function DesignRequestForm() {
     headline: '',
     requiredText: '',
     mandatoryInfo: '',
-    
+
     // Bloco 4: Technical
     dimensions: '',
     unit: 'Pixels (px)',
@@ -72,7 +72,7 @@ export function DesignRequestForm() {
     colors: '',
     brandGuidelines: '',
     finishing: '',
-    
+
     // Bloco 5: Files
     logoUrl: '',
     fileUrls: '',
@@ -80,25 +80,25 @@ export function DesignRequestForm() {
     referenceLinks: '',
     likes: '',
     dislikes: '',
-    
+
     // Bloco 6: Deadline
     deadline: '',
     isRush: false,
     rushReason: '',
     eventDate: '',
-    
+
     // Bloco 7: Approval
     approverName: '',
     approverContact: '',
     reviewerCount: 1,
     revisionCount: 1,
     additionalChargesAware: false,
-    
+
     // Bloco 8: Internal
     priority: 'MEDIUM',
     internalNotes: '',
     designerId: '',
-    
+
     // Bloco 9: Confirmation
     isConfirmed: false,
     briefingAware: false,
@@ -130,7 +130,7 @@ export function DesignRequestForm() {
       if (!token || !user) return;
       const canSeeDesigners = user.role === 'ADMIN';
       if (!canSeeDesigners) return;
-      
+
       try {
         const res = await fetch('/api/users', {
           headers: { Authorization: `Bearer ${token}` }
@@ -171,10 +171,10 @@ export function DesignRequestForm() {
     try {
       const url = isEditing ? `/api/projects/${id}` : '/api/projects';
       const method = isEditing ? 'PATCH' : 'POST';
-      
+
       const res = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -240,10 +240,10 @@ export function DesignRequestForm() {
             <Section icon={MousePointer2} title="Project Type">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
                 {['BRAND IDENTITY', 'DIGITAL UI', 'PRINT MEDIA', 'MOTION ASSETS'].map(type => (
-                  <CardSelect 
-                    key={type} 
-                    label={type} 
-                    active={formData.projectType === type} 
+                  <CardSelect
+                    key={type}
+                    label={type}
+                    active={formData.projectType === type}
                     onClick={() => updateField('projectType', type)}
                     icon={type === 'BRAND IDENTITY' ? Briefcase : type === 'DIGITAL UI' ? Monitor : type === 'PRINT MEDIA' ? Printer : Video}
                   />
@@ -288,15 +288,15 @@ export function DesignRequestForm() {
           {currentStep === 5 && (
             <Section icon={UploadCloud} title="References and Files">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                <DropZone 
-                  label="UPLOAD FILES / ASSETS" 
-                  value={formData.fileUrls} 
-                  onChange={urls => updateField('fileUrls', urls)} 
+                <DropZone
+                  label="UPLOAD FILES / ASSETS"
+                  value={formData.fileUrls}
+                  onChange={urls => updateField('fileUrls', urls)}
                 />
-                <DropZone 
-                  label="UPLOAD PHOTOS" 
-                  value={formData.photoUrls} 
-                  onChange={urls => updateField('photoUrls', urls)} 
+                <DropZone
+                  label="UPLOAD PHOTOS"
+                  value={formData.photoUrls}
+                  onChange={urls => updateField('photoUrls', urls)}
                 />
                 <Input label="REFERENCE LINKS" value={formData.referenceLinks} onChange={v => updateField('referenceLinks', v)} />
                 <Input label="EXISTING LOGO (URL)" value={formData.logoUrl} onChange={v => updateField('logoUrl', v)} />
@@ -330,10 +330,10 @@ export function DesignRequestForm() {
                 <Input label="NUMBER OF REVIEWERS" type="number" value={formData.reviewerCount} onChange={v => updateField('reviewerCount', parseInt(v))} />
                 <Input label="INCLUDED REVISIONS" type="number" value={formData.revisionCount} onChange={v => updateField('revisionCount', parseInt(v))} />
               </div>
-              <CheckBox 
-                label="ACKNOWLEDGMENT OF ADDITIONAL CHARGES AFTER APPROVAL" 
-                checked={formData.additionalChargesAware} 
-                onChange={v => updateField('additionalChargesAware', v)} 
+              <CheckBox
+                label="ACKNOWLEDGMENT OF ADDITIONAL CHARGES AFTER APPROVAL"
+                checked={formData.additionalChargesAware}
+                onChange={v => updateField('additionalChargesAware', v)}
               />
             </Section>
           )}
@@ -345,7 +345,7 @@ export function DesignRequestForm() {
                 {user?.role === 'ADMIN' && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">Assign Designer</label>
-                    <select 
+                    <select
                       value={formData.designerId}
                       onChange={e => updateField('designerId', e.target.value)}
                       className="w-full bg-zinc-50 border border-zinc-100 focus:bg-white focus:border-primary/20 p-4 rounded-2xl outline-none text-sm font-bold text-zinc-950 transition-all appearance-none"
@@ -369,11 +369,11 @@ export function DesignRequestForm() {
                 <CheckBox label="AWARE OF DELAYS CAUSED BY INCOMPLETE BRIEFING" checked={formData.briefingAware} onChange={v => updateField('briefingAware', v)} />
                 <CheckBox label="AUTHORIZATION TO START AFTER INTERNAL VALIDATION" checked={formData.validationAware} onChange={v => updateField('validationAware', v)} />
               </div>
-              
+
               <div className="mt-8 md:mt-12 bg-primary/5 p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-primary/20 flex flex-col items-center text-center gap-4 md:gap-6">
                 <h4 className="text-lg md:text-xl font-black tracking-tighter text-zinc-950 uppercase">Ready to Production</h4>
                 <p className="text-zinc-500 text-[11px] md:text-sm font-bold max-w-md">By submitting, you initiate the professional design workflow for this requisition.</p>
-                <button 
+                <button
                   onClick={handleSubmit}
                   disabled={loading}
                   className="signature-gradient w-full md:w-auto px-16 py-5 md:py-6 rounded-[20px] md:rounded-[24px] text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
@@ -389,8 +389,8 @@ export function DesignRequestForm() {
 
       {/* Navigation Buttons */}
       <div className="flex justify-between items-center bg-white/90 backdrop-blur-md p-4 md:p-6 md:rounded-[32px] border-t md:border border-zinc-100 fixed bottom-0 md:bottom-8 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:max-w-4xl shadow-2xl z-40">
-        <button 
-          onClick={prevStep} 
+        <button
+          onClick={prevStep}
           disabled={currentStep === 1}
           className="flex items-center gap-2 md:gap-3 px-4 md:px-8 py-4 text-zinc-400 font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:text-zinc-950 disabled:opacity-20 transition-all"
         >
@@ -398,7 +398,7 @@ export function DesignRequestForm() {
           Back
         </button>
         {currentStep < 9 && (
-          <button 
+          <button
             onClick={nextStep}
             className="flex items-center gap-4 bg-zinc-950 text-white px-8 md:px-10 py-4 md:py-5 rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-zinc-800 transition-all group"
           >
@@ -411,7 +411,6 @@ export function DesignRequestForm() {
   );
 }
 
-// Helper Components
 function Section({ icon: Icon, title, children }: any) {
   return (
     <div className="bg-white border border-zinc-100 p-6 md:p-10 rounded-[32px] md:rounded-[40px] shadow-sm space-y-8 md:space-y-10 relative overflow-hidden">
@@ -430,7 +429,7 @@ function Input({ label, value, onChange, type = "text" }: any) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">{label}</label>
-      <input 
+      <input
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -444,7 +443,7 @@ function TextArea({ label, value, onChange, rows = 4 }: any) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">{label}</label>
-      <textarea 
+      <textarea
         rows={rows}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -458,7 +457,7 @@ function Select({ label, options, value, onChange }: any) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-2">{label}</label>
-      <select 
+      <select
         value={value}
         onChange={e => onChange(e.target.value)}
         className="w-full bg-zinc-50 border border-zinc-100 focus:bg-white focus:border-primary/20 p-4 rounded-2xl outline-none text-sm font-bold text-zinc-950 transition-all appearance-none"
@@ -471,10 +470,10 @@ function Select({ label, options, value, onChange }: any) {
 
 function CardSelect({ label, active, onClick, icon: Icon }: any) {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`
-        p-6 rounded-[24px] flex flex-col items-center gap-4 cursor-pointer transition-all border-2 
+        p-6 rounded-[24px] flex flex-col items-center gap-4 cursor-pointer transition-all border-2
         ${active ? 'border-primary bg-primary/5 text-primary shadow-lg shadow-primary/10' : 'border-zinc-100 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}
       `}
     >
@@ -523,16 +522,16 @@ function DropZone({ label, value, onChange }: { label: string, value?: string, o
   const fileCount = value ? value.split(',').filter(Boolean).length : 0;
 
   return (
-    <div 
+    <div
       onClick={() => fileInputRef.current?.click()}
       className={`border-2 border-dashed rounded-[32px] p-10 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group relative ${
         uploading ? 'bg-zinc-50 border-primary' : 'border-zinc-200 hover:bg-zinc-50 hover:border-primary'
       }`}
     >
-      <input 
-        type="file" 
-        multiple 
-        className="hidden" 
+      <input
+        type="file"
+        multiple
+        className="hidden"
         ref={fileInputRef}
         onChange={handleUpload}
         disabled={uploading}
@@ -555,11 +554,11 @@ function DropZone({ label, value, onChange }: { label: string, value?: string, o
 function CheckBox({ label, checked, onChange }: any) {
   return (
     <label className="flex items-center gap-5 p-6 bg-zinc-50 rounded-[28px] border border-zinc-100 cursor-pointer hover:bg-zinc-100 transition-all group">
-      <input 
-        type="checkbox" 
-        checked={checked} 
-        onChange={e => onChange(e.target.checked)} 
-        className="w-7 h-7 rounded-xl border-zinc-300 text-primary focus:ring-primary focus:ring-offset-zinc-50 transition-all" 
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="w-7 h-7 rounded-xl border-zinc-300 text-primary focus:ring-primary focus:ring-offset-zinc-50 transition-all"
       />
       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-zinc-950 leading-relaxed">{label}</span>
     </label>
