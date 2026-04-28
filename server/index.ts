@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
+import { createClient } from '@supabase/supabase-js';
 import {
   createProject,
   createUser,
@@ -42,27 +43,15 @@ app.use(cors());
 app.use(express.json());
 
 const distPath = path.join(__dirname, '../dist');
-const uploadsPath = path.join(__dirname, '../public/uploads');
-
-if (!fs.existsSync(uploadsPath)) {
-  fs.mkdirSync(uploadsPath, { recursive: true });
-}
-
 app.use(express.static(distPath));
-app.use('/uploads', express.static(uploadsPath));
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsPath);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_REY || process.env.SUPABASE_ANON_KEY || ''
+);
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
@@ -383,7 +372,7 @@ app.post('/api/projects', async (req, res) => {
   }
 });
 
-app.post('/api/upload', upload.array('files'), (req, res) => {
+app.post('/api/upload', upload.array('files'), async (req, res) => {
   try {
     const files = req.files as Express.Multer.File[];
 
@@ -391,11 +380,35 @@ app.post('/api/upload', upload.array('files'), (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    const urls = files.map((file) => `/uploads/${file.filename}`);
+    const uploadPromises = files.map(async (file) => {
+      const fileExt = path.extname(file.originalname);
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('project-assets')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+
+      if (error) {
+        console.error('[SUPABASE STORAGE] Upload error:', error);
+        throw error;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-assets')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    });
+
+    const urls = await Promise.all(uploadPromises);
     res.json({ urls });
   } catch (error) {
     console.error('[UPLOAD] Error:', getErrorMessage(error));
-    res.status(500).json({ error: 'Upload failed' });
+    res.status(500).json({ error: 'Upload failed', details: getErrorMessage(error) });
   }
 });
 
